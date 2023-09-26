@@ -1,11 +1,32 @@
 mod routes;
 
+use std::env;
+
+use dotenv::dotenv;
+
 use routes::test::{test, test_JSON, test_from_path, send_post};
 
-use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder, };
+
+use std::error::Error;
+use sqlx::Connection;
+use sqlx::Row;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    dotenv().ok();
+
+    let db_host = &env::var("DB_HOST").expect("Error: DB_HOST .env variable not found");
+    let db_port = &env::var("DB_PORT").expect("Error: DB_PORT .env variable not found");
+    let db_name = &env::var("DB_NAME").expect("Error: DB_Name .env variable not found");
+    let db_user = &env::var("DB_USER").expect("Error: DB_USER .env variable not found");
+    let db_password = &env::var("DB_PASSWORD").expect("Error: DB_PASSWORD .env variable not found");
+
+    let database_url = format!("postgres://{}:{}@{}:{}/{}", db_user, db_password, db_host, db_port, db_name ); 
+
+    print!("{}", database_url);
+    let mut pool = sqlx::postgres::PgPool::connect(&database_url).await.expect("Failed to read configuration.");
+
     // Might need to add move to the closure
     HttpServer::new(|| {
         App::new()
