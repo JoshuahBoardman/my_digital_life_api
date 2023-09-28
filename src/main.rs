@@ -4,13 +4,9 @@ use std::env;
 
 use dotenv::dotenv;
 
-use routes::test::{send_post, test, test_JSON, test_from_path, post_book};
+use routes::test::{ post_book, test };
 
-use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
-
-use sqlx::Connection;
-use sqlx::Row;
-use std::error::Error;
+use actix_web::{ web, App, HttpServer };
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -33,15 +29,11 @@ async fn main() -> std::io::Result<()> {
         .expect("Failed to read configuration.");
     let pool = web::Data::new(pool);
 
-    // Might need to add move to the closure
     HttpServer::new(move || {
         App::new()
             .app_data(pool.clone())
             .service(test)
-            .service(test_JSON)
-            .service(test_from_path)
-            .service(send_post)
-            .route("/test/post_book", web::post().to(post_book))
+            .service(post_book)
     })
     .bind(("127.0.0.1", 8080))?
     .run()
