@@ -1,12 +1,13 @@
+pub mod model;
 mod routes;
 
 use std::env;
 
 use dotenv::dotenv;
 
-use routes::test::{ post_book, test };
+use routes::test::{get_book_by_id, post_book, test};
 
-use actix_web::{ web, App, HttpServer };
+use actix_web::{web, App, HttpServer};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -34,6 +35,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(pool.clone())
             .service(test)
             .service(post_book)
+            .service(get_book_by_id)
     })
     .bind(("127.0.0.1", 8080))?
     .run()
