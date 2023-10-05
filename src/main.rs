@@ -5,7 +5,7 @@ use std::env;
 
 use dotenv::dotenv;
 
-use routes::test::{get_book_by_id, post_book, test};
+use routes::books::{get_book_by_id, get_books, post_book, test};
 
 use actix_web::{web, App, HttpServer};
 
@@ -36,6 +36,7 @@ async fn main() -> std::io::Result<()> {
             .service(test)
             .service(post_book)
             .service(get_book_by_id)
+            .service(get_books)
     })
     .bind(("127.0.0.1", 8080))?
     .run()

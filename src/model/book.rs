@@ -4,14 +4,14 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
 
-#[derive(Deserialize, Serialize, FromRow)]
+#[derive(Deserialize, Serialize, FromRow, Debug)]
 pub struct Book {
     pub id: Option<Uuid>,
     pub name: String,
     pub author: String,
     pub description: String,
     pub rating: BigDecimal,
-    pub review: String,
+    pub review: Option<String>,
     pub finished: bool,
     pub inserted_at: Option<DateTime<Utc>>,
 }
@@ -31,7 +31,7 @@ impl Book {
             author: author,
             description: description,
             rating: rating,
-            review: review,
+            review: Some(review),
             finished: finished,
             inserted_at: None,
         }

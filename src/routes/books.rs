@@ -9,35 +9,42 @@ pub async fn test() -> impl Responder {
     HttpResponse::Ok().body("testing123")
 }
 
-#[get("/book-shelf/books/{id}")]
+#[get("/book-shelf/books/{bookId}")]
 pub async fn get_book_by_id(
     path: web::Path<Uuid>,
     pool: web::Data<PgPool>,
 ) -> Result<HttpResponse, Error> {
-    let id: Uuid = path.into_inner();
-    let result = sqlx::query!(
+    let book_id: Uuid = path.into_inner();
+    match sqlx::query_as!(
+        Book,
         "
-            SELECT name, author, description, rating, review, finished 
+            SELECT id, name, author, description, rating, review, finished, inserted_at
             FROM bookShelf WHERE id = $1
         ",
-        id
+        book_id
     )
     .fetch_one(pool.get_ref())
-    .await;
-
-    match result {
-        Ok(book) => {
-            let book = Book::new(
-                book.name,
-                book.author,
-                book.description,
-                book.rating,
-                book.review.unwrap(),
-                book.finished,
-            );
-            Ok(HttpResponse::Ok().json(book))
-        }
+    .await
+    {
+        Ok(book) => Ok(HttpResponse::Ok().json(book)),
         Err(_) => Ok(HttpResponse::NotFound().json("Error: book not found")),
+    }
+}
+
+#[get("/book-shelf/books")]
+pub async fn get_books(pool: web::Data<PgPool>) -> Result<HttpResponse, Error> {
+    match sqlx::query_as!(
+        Book,
+        "
+        SELECT id, name, author, description, rating, review, finished, inserted_at 
+        FROM bookShelf
+        "
+    )
+    .fetch_all(pool.as_ref())
+    .await
+    {
+        Ok(books) => Ok(HttpResponse::Ok().json(books)),
+        Err(_) => Ok(HttpResponse::InternalServerError().finish()),
     }
 }
 
