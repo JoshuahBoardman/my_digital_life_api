@@ -1,13 +1,8 @@
 use crate::model::book::Book;
-use actix_web::{error::Error, get, post, web, web::Json, HttpResponse, Responder, Result};
+use actix_web::{error::Error, get, post, web, web::Json, HttpResponse, Result};
 use chrono::Utc;
-use sqlx::{self, PgPool};
+use sqlx::PgPool;
 use uuid::Uuid;
-
-#[get("/test")]
-pub async fn test() -> impl Responder {
-    HttpResponse::Ok().body("testing123")
-}
 
 #[get("/book-shelf/books/{bookId}")]
 pub async fn get_book_by_id(

@@ -5,7 +5,8 @@ use std::env;
 
 use dotenv::dotenv;
 
-use routes::books::{get_book_by_id, get_books, post_book, test};
+use routes::health_check::health_check;
+use routes::books::{ get_book_by_id, get_books, post_book };
 
 use actix_web::{web, App, HttpServer};
 
@@ -33,7 +34,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(pool.clone())
-            .service(test)
+            .service(health_check)
             .service(post_book)
             .service(get_book_by_id)
             .service(get_books)
