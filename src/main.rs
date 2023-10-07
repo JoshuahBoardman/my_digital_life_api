@@ -1,29 +1,20 @@
+pub mod configuration;
 pub mod model;
 mod routes;
 
-use std::env;
+use configuration::get_configuration;
 
-use dotenv::dotenv;
-
+use routes::books::{get_book_by_id, get_books, post_book};
 use routes::health_check::health_check;
-use routes::books::{ get_book_by_id, get_books, post_book };
 
 use actix_web::{web, App, HttpServer};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    dotenv().ok();
+    let configuration_settings = get_configuration();
+    let database_settings = &configuration_settings.database;
 
-    let db_host = &env::var("DB_HOST").expect("Error: DB_HOST .env variable not found");
-    let db_port = &env::var("DB_PORT").expect("Error: DB_PORT .env variable not found");
-    let db_name = &env::var("DB_NAME").expect("Error: DB_Name .env variable not found");
-    let db_user = &env::var("DB_USER").expect("Error: DB_USER .env variable not found");
-    let db_password = &env::var("DB_PASSWORD").expect("Error: DB_PASSWORD .env variable not found");
-
-    let database_url = format!(
-        "postgres://{}:{}@{}:{}/{}",
-        db_user, db_password, db_host, db_port, db_name
-    );
+    let database_url = database_settings.get_database_url();
 
     print!("{}", database_url);
     let pool = sqlx::postgres::PgPool::connect(&database_url)
@@ -39,7 +30,7 @@ async fn main() -> std::io::Result<()> {
             .service(get_book_by_id)
             .service(get_books)
     })
-    .bind(("127.0.0.1", 8080))?
+    .listen(configuration_settings.get_tcp_listener())?
     .run()
     .await
 }
