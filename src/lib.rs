@@ -1,11 +1,12 @@
 pub mod configuration;
+pub mod extractors;
 pub mod model;
 mod routes;
 
-use routes::books::{ get_book_by_id, get_books, post_book };
-use routes::health_check::health_check;
 use actix_web::dev::Server;
 use actix_web::{web::Data, App, HttpServer};
+use routes::books::{get_book_by_id, get_books, post_book};
+use routes::health_check::health_check;
 use sqlx::PgPool;
 use std::net::TcpListener;
 

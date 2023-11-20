@@ -1,7 +1,7 @@
-use std::net::TcpListener;
 use actix_web::{rt::spawn, web::Data};
 use digital_bookshelf_api::{configuration::get_configuration, run};
 use sqlx::PgPool;
+use std::net::TcpListener;
 
 pub async fn spawn_app() -> String {
     let local_host = "127.0.0.1";
