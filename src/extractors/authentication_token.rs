@@ -1,10 +1,10 @@
+use crate::model::auth::Claims;
 use actix_web::{error::ErrorUnauthorized, http, web, Error as ActixWebError, FromRequest};
 use jsonwebtoken::{
     decode, errors::Error as JWTError, Algorithm, DecodingKey, TokenData, Validation,
 };
 use serde::{Deserialize, Serialize};
 use std::future::{ready, Ready};
-use crate::model::auth::Claims;
 
 #[derive(Serialize, Deserialize)]
 pub struct AuthenticationToken {
