@@ -19,23 +19,23 @@ pub fn auth_scope() -> Scope {
 #[get("/verify/{token}")]
 pub async fn verify(
     path: web::Path<String>,
-    //secret: web::Data<Secret>,
+    secret: web::Data<Secret>,
 ) -> Result<HttpResponse, actix_error> {
     let token: String = path.into_inner();
 
     // `token` is a struct with 2 fields: `header` and `claims` where `claims` is your own struct.
-/*    let decode: Result<TokenData<Claims>, JWTError> = decode(
+    let decode: Result<TokenData<Claims>, JWTError> = decode(
         &token, // TODO: token needs to contain both header and Claims
         &DecodingKey::from_secret(secret.0.as_ref()),
         &Validation::new(Algorithm::HS256),
-    ); */
+    );
 
-    match token {
-        token => {
+    match decode {
+        Ok(token) => {
             //TODO: Set token to authentication header
-            Ok(HttpResponse::Ok().json(token))
+            Ok(HttpResponse::Ok().json(token.claims))
         }
-       // _ => Err(ErrorUnauthorized("Unautherized")),
+        Err(_) => Err(ErrorUnauthorized("Unautherized")),
     }
 }
 
