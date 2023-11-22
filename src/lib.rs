@@ -5,8 +5,9 @@ mod routes;
 
 use actix_web::dev::Server;
 use actix_web::{web::Data, App, HttpServer};
-use routes::books::{get_book_by_id, get_books, post_book};
+use routes::books::book_shelf_scope;
 use routes::health_check::health_check;
+use routes::auth::auth_scope;
 use sqlx::PgPool;
 use std::net::TcpListener;
 
@@ -15,9 +16,8 @@ pub fn run(listener: TcpListener, db_pool: Data<PgPool>) -> std::io::Result<Serv
         App::new()
             .app_data(db_pool.clone())
             .service(health_check)
-            .service(post_book)
-            .service(get_book_by_id)
-            .service(get_books)
+            .service(book_shelf_scope())
+            .service(auth_scope())
     })
     .listen(listener)?
     .run();

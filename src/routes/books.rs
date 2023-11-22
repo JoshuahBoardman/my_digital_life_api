@@ -1,10 +1,17 @@
 use crate::model::book::Book;
-use actix_web::{error::Error, get, post, web, web::Json, HttpResponse, Result};
+use actix_web::{error::Error, get, post, web, web::Json, HttpResponse, Result, Scope};
 use chrono::Utc;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-#[get("/book-shelf/books/{bookId}")]
+pub fn book_shelf_scope() -> Scope {
+    web::scope("/book-shelf")
+        .service(get_book_by_id)
+        .service(get_books)
+        .service(post_book)
+}
+
+#[get("/books/{bookId}")]
 pub async fn get_book_by_id(
     path: web::Path<Uuid>,
     pool: web::Data<PgPool>,
@@ -26,7 +33,7 @@ pub async fn get_book_by_id(
     }
 }
 
-#[get("/book-shelf/books")]
+#[get("/books")]
 pub async fn get_books(pool: web::Data<PgPool>) -> Result<HttpResponse, Error> {
     match sqlx::query_as!(
         Book,
@@ -43,7 +50,7 @@ pub async fn get_books(pool: web::Data<PgPool>) -> Result<HttpResponse, Error> {
     }
 }
 
-#[post("/book-shelf/books")]
+#[post("books")]
 pub async fn post_book(book: Json<Book>, pool: web::Data<PgPool>) -> HttpResponse {
     match sqlx::query!(
         r#"
