@@ -1,18 +1,16 @@
 use crate::model::auth::{Claims, Secret};
 use actix_web::{
     error::{Error as actix_error, ErrorUnauthorized},
-    get, web, HttpResponse, Scope
+    get, web, HttpResponse, Scope,
 };
 use jsonwebtoken::{
     decode, errors::Error as JWTError, Algorithm, DecodingKey, TokenData, Validation,
 };
 
 pub fn auth_scope() -> Scope {
-    web::scope("/auth")
-        .service(verify)
-        //.service(login)
+    web::scope("/auth").service(verify)
+    //.service(login)
 }
-
 
 // TODO: Verify Route - should check the url params for the token and store it in correct cookie
 // storage.
