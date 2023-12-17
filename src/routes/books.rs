@@ -21,7 +21,7 @@ pub async fn get_book_by_id(
         Book,
         "
             SELECT id, name, author, description, rating, review, finished, inserted_at
-            FROM bookShelf WHERE id = $1
+            FROM books WHERE id = $1
         ",
         book_id
     )
@@ -39,7 +39,7 @@ pub async fn get_books(pool: web::Data<PgPool>) -> Result<HttpResponse, Error> {
         Book,
         "
         SELECT id, name, author, description, rating, review, finished, inserted_at 
-        FROM bookShelf
+        FROM books
         "
     )
     .fetch_all(pool.as_ref())
@@ -54,7 +54,7 @@ pub async fn get_books(pool: web::Data<PgPool>) -> Result<HttpResponse, Error> {
 pub async fn post_book(book: Json<Book>, pool: web::Data<PgPool>) -> HttpResponse {
     match sqlx::query!(
         r#"
-    INSERT INTO bookShelf (id, name, author, description, rating, review, finished, inserted_at)
+    INSERT INTO books (id, name, author, description, rating, review, finished, inserted_at)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             "#,
         Uuid::new_v4(),
