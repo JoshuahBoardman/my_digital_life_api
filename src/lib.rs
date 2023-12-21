@@ -1,6 +1,6 @@
 pub mod configuration;
 pub mod email_client;
-//pub mod extractors;
+pub mod extractors;
 pub mod model;
 mod routes;
 

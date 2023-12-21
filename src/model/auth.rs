@@ -8,10 +8,10 @@ pub struct Secret(pub String);
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Claims {
+    pub exp: usize,         // Experation timestamp
     pub iss: String,        // base_url
     pub sub: Uuid,          // User id
     pub iat: NaiveDateTime, // Token was issued timestamp
-    pub exp: NaiveDateTime, // Experation timestamp
 }
 
 // May want to expand this later

@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use reqwest::Client;
 use serde::Serialize;
 

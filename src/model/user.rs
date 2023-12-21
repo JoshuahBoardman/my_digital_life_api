@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::{postgres::types::PgCiText, FromRow};
+use sqlx::FromRow;
 use uuid::Uuid;
 
 #[derive(Deserialize, Serialize, FromRow, Debug)]

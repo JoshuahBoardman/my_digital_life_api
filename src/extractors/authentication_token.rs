@@ -1,5 +1,7 @@
-use crate::model::auth::Claims;
-use actix_web::{error::ErrorUnauthorized, http, web, Error as ActixWebError, FromRequest};
+use crate::model::auth::{Claims, Secret};
+use actix_web::{
+    error::ErrorUnauthorized, web, Error as ActixWebError, FromRequest, Result as ActixResult,
+};
 use jsonwebtoken::{
     decode, errors::Error as JWTError, Algorithm, DecodingKey, TokenData, Validation,
 };
@@ -8,7 +10,7 @@ use std::future::{ready, Ready};
 
 #[derive(Serialize, Deserialize)]
 pub struct AuthenticationToken {
-    pub id: usize,
+    pub claims: Claims,
 }
 
 impl FromRequest for AuthenticationToken {
@@ -16,33 +18,40 @@ impl FromRequest for AuthenticationToken {
     type Future = Ready<Result<Self, Self::Error>>;
 
     fn from_request(req: &actix_web::HttpRequest, _: &mut actix_web::dev::Payload) -> Self::Future {
-        let auth_header: Option<&http::header::HeaderValue> =
-            req.headers().get(http::header::AUTHORIZATION);
-        let auth_token: String = auth_header
-            .expect("Unable to extractrauthentication token")
-            .to_str()
-            .unwrap_or("")
-            .to_string();
-        if auth_token.is_empty() {
-            return ready(Err(ErrorUnauthorized("Invalid auth token")));
-        }
-
         let secret: String = req
-            .app_data::<web::Data<String>>()
+            .app_data::<web::Data<Secret>>()
             .expect("Unable to retrieve the authentication secret")
+            .0
             .to_string();
 
-        let decode: Result<TokenData<Claims>, JWTError> = decode::<Claims>(
-            &auth_token,
-            &DecodingKey::from_secret(secret.as_str().as_ref()),
-            &Validation::new(Algorithm::HS256),
-        );
+        let cookie = match req.cookie("authToken") {
+            Some(cookie) => cookie,
+            None => {
+                return ready(Err(ErrorUnauthorized(
+                    "Failed to find authentication cookie",
+                )))
+            }
+        };
 
-        match decode {
-            Ok(token) => ready(Ok(AuthenticationToken {
-                id: token.claims.id,
-            })),
-            Err(_) => ready(Err(ErrorUnauthorized("Unautherized"))),
+        let token = cookie.value();
+        match validate_jwt(token, &secret) {
+            Ok(claims) => ready(Ok(AuthenticationToken { claims: claims })),
+            Err(err) => ready(Err(err)),
         }
+    }
+}
+
+fn validate_jwt(jwt: &str, secret: &str) -> ActixResult<Claims> {
+    let decode: Result<TokenData<Claims>, JWTError> = decode::<Claims>(
+        jwt,
+        &DecodingKey::from_secret(secret.as_ref()),
+        &Validation::new(Algorithm::HS256),
+    );
+
+    //if decode.
+
+    match decode {
+        Ok(token) => Ok(token.claims),
+        Err(err) => Err(ErrorUnauthorized(format!("JWT is invalid - {}", err))),
     }
 }

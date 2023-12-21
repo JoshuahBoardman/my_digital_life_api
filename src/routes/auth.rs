@@ -88,7 +88,7 @@ pub async fn verify(
         iss: base_url.as_str().to_string(),
         sub: user_record.id.to_owned(),
         iat: Utc::now().naive_utc(),
-        exp: experation_timestamp.to_owned(),
+        exp: experation_timestamp.timestamp().to_owned() as usize,
     };
 
     let token = match encode(
@@ -109,8 +109,8 @@ pub async fn verify(
 
     let cookie = Cookie::build("authToken", token.to_owned())
         /*.domain("www.joshuahboardman-api.com/") // TODO: get a domain called
-         * joshuahboardman-api for the api
-        .path("/")*/
+         * joshuahboardman-api for the api*/
+        .path("/")
         .max_age(cookie_duration)
         .same_site(SameSite::Strict)
         .http_only(true)

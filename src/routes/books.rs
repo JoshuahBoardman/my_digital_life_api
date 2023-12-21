@@ -1,3 +1,4 @@
+use crate::extractors::authentication_token::AuthenticationToken;
 use crate::model::book::Book;
 use actix_web::{error::Error, get, post, web, web::Json, HttpResponse, Result, Scope};
 use chrono::Utc;
@@ -51,7 +52,11 @@ pub async fn get_books(pool: web::Data<PgPool>) -> Result<HttpResponse, Error> {
 }
 
 #[post("books")]
-pub async fn post_book(book: Json<Book>, pool: web::Data<PgPool>) -> HttpResponse {
+pub async fn post_book(
+    book: Json<Book>,
+    pool: web::Data<PgPool>,
+    _: AuthenticationToken,
+) -> HttpResponse {
     match sqlx::query!(
         r#"
     INSERT INTO books (id, name, author, description, rating, review, finished, inserted_at)
