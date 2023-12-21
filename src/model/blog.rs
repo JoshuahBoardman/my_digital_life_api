@@ -9,6 +9,6 @@ pub struct Blog {
     pub author_id: Uuid,
     pub title: String,
     pub body: String,
-    pub last_update: DateTime<Utc>,
-    pub iserted_at: DateTime<Utc>,
+    pub last_updated: DateTime<Utc>,
+    pub inserted_at: DateTime<Utc>,
 }

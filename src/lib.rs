@@ -9,7 +9,7 @@ use actix_web::{web::Data, App, HttpServer};
 use email_client::EmailClient;
 use model::{auth::Secret, common::Url};
 use routes::health_check::health_check;
-use routes::{auth::auth_scope, books::book_shelf_scope};
+use routes::{auth::auth_scope, books::book_shelf_scope, blog::blog_scope};
 use sqlx::PgPool;
 use std::net::TcpListener;
 
@@ -30,6 +30,7 @@ pub fn run(
             .service(health_check)
             .service(book_shelf_scope())
             .service(auth_scope())
+            .service(blog_scope())
     })
     .listen(listener)?
     .run();
