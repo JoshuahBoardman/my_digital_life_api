@@ -75,7 +75,7 @@ pub async fn post_blog_post(
         blog.title,
         blog.body,
         Utc::now(),
-        Utc::now() 
+        Utc::now()
     )
     .fetch_one(pool.get_ref())
     .await

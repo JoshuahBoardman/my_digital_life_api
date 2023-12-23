@@ -2,11 +2,11 @@ use crate::model::user::User;
 use crate::{
     email_client::{EmailClient, TemplateModel},
     model::{
-        auth::{Claims, LoginRequestBody, Secret, VerificationCode},
+        auth::{Claims, LoginRequestBody, /*Secret,*/ VerificationCode},
         common::Url,
     },
 };
-use actix_web::error::ErrorInternalServerError;
+use actix_web::error::{ErrorInternalServerError, ErrorUnprocessableEntity};
 use actix_web::{
     cookie::{time, Cookie, SameSite},
     error::{Error as actix_error, ErrorUnauthorized},
@@ -15,8 +15,10 @@ use actix_web::{
 use chrono::{prelude::*, Duration};
 use jsonwebtoken::{encode, EncodingKey, Header};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
+use regex::Regex;
 use sqlx::PgPool;
 use uuid::Uuid;
+use secrecy::{Secret, ExposeSecret};
 
 pub fn auth_scope() -> Scope {
     web::scope("/auth").service(login).service(verify)
@@ -25,7 +27,7 @@ pub fn auth_scope() -> Scope {
 #[get("/verify/{code}")]
 pub async fn verify(
     path: web::Path<String>,
-    secret: web::Data<Secret>,
+    secret: web::Data<Secret<String>>,
     pool: web::Data<PgPool>,
     base_url: web::Data<Url>,
 ) -> Result<HttpResponse, actix_error> {
@@ -94,7 +96,7 @@ pub async fn verify(
     let token = match encode(
         &Header::default(),
         &claims,
-        &EncodingKey::from_secret(secret.0.as_ref()),
+        &EncodingKey::from_secret(secret.expose_secret().as_ref()),
     ) {
         Ok(t) => t,
         Err(err) => {
@@ -128,6 +130,12 @@ pub async fn login(
     base_url: web::Data<Url>,
 ) -> Result<HttpResponse, actix_error> {
     let user_email: String = req_body.user_email.to_owned().to_string();
+
+    let email_regex = Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").unwrap();
+
+    if !(email_regex.is_match(&user_email)) {
+        return Err(ErrorUnprocessableEntity("The email provided is invalid"));
+    }
 
     // TODO: Make this a method on the user struct
     let user_record = match sqlx::query_as!(

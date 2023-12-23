@@ -7,18 +7,19 @@ mod routes;
 use actix_web::dev::Server;
 use actix_web::{web::Data, App, HttpServer};
 use email_client::EmailClient;
-use model::{auth::Secret, common::Url};
+use model::{/*auth::Secret,*/ common::Url};
 use routes::health_check::health_check;
-use routes::{auth::auth_scope, books::book_shelf_scope, blog::blog_scope};
+use routes::{auth::auth_scope, blog::blog_scope, books::book_shelf_scope};
 use sqlx::PgPool;
 use std::net::TcpListener;
+use secrecy::Secret;
 
 pub fn run(
     //TODO: pass base_url into app sate
     listener: TcpListener,
     db_pool: Data<PgPool>,
     email_client: Data<EmailClient>,
-    secret: Data<Secret>,
+    secret: Data<Secret<String>>,
     base_rul: Data<Url>,
 ) -> std::io::Result<Server> {
     let server = HttpServer::new(move || {

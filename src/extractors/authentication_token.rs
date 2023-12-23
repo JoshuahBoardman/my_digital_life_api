@@ -1,4 +1,4 @@
-use crate::model::auth::{Claims, Secret};
+use crate::model::auth::{Claims, /*Secret*/};
 use actix_web::{
     error::ErrorUnauthorized, web, Error as ActixWebError, FromRequest, Result as ActixResult,
 };
@@ -7,6 +7,7 @@ use jsonwebtoken::{
 };
 use serde::{Deserialize, Serialize};
 use std::future::{ready, Ready};
+use secrecy::{Secret, ExposeSecret};
 
 #[derive(Serialize, Deserialize)]
 pub struct AuthenticationToken {
@@ -19,9 +20,9 @@ impl FromRequest for AuthenticationToken {
 
     fn from_request(req: &actix_web::HttpRequest, _: &mut actix_web::dev::Payload) -> Self::Future {
         let secret: String = req
-            .app_data::<web::Data<Secret>>()
+            .app_data::<web::Data<Secret<String>>>()
             .expect("Unable to retrieve the authentication secret")
-            .0
+            .expose_secret()
             .to_string();
 
         let cookie = match req.cookie("authToken") {

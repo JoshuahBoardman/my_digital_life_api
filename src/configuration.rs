@@ -1,5 +1,6 @@
 use dotenvy::dotenv;
 use std::{env, net::TcpListener};
+use secrecy::Secret;
 
 #[derive(serde::Deserialize)]
 pub struct Settings {
@@ -13,7 +14,7 @@ pub struct ApplicationSettings {
     pub host: String,
     pub port: u16,
     pub base_url: String,
-    pub secret: String, // TODO: may want to add something like secrecy to obscure the secret (keep
+    pub secret: Secret<String>, // TODO: may want to add something like secrecy to obscure the secret (keep
                         // things tight)
 }
 
@@ -88,7 +89,7 @@ pub fn get_configuration() -> Settings {
             .parse::<u16>()
             .expect("Error: value is not a u16"),
         base_url: application_base_url.to_string(),
-        secret: application_secret.to_string(),
+        secret: Secret::new(application_secret.to_string()),
     };
 
     let email_client = EmailClientSettings {

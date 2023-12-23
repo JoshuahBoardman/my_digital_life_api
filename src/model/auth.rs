@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize)]
-pub struct Secret(pub String);
+/*#[derive(Serialize, Deserialize)]
+pub struct Secret(pub String);*/ 
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Claims {

@@ -2,8 +2,9 @@ pub mod configuration;
 
 use actix_web::web::Data;
 use configuration::get_configuration;
-use digital_bookshelf_api::{email_client::EmailClient, model::auth::Secret, run};
+use digital_bookshelf_api::{email_client::EmailClient, /*model::auth::Secret,*/ run};
 use sqlx::PgPool;
+use secrecy::Secret;
 
 #[actix_web::main]
 async fn main() -> Result<(), std::io::Error> {
@@ -28,7 +29,7 @@ async fn main() -> Result<(), std::io::Error> {
     ));
 
     let application_settings = &configuration_settings.application;
-    let app_secret = Data::new(Secret(application_settings.secret.to_owned()));
+    let app_secret: Data<Secret<String>> = Data::new(application_settings.secret.to_owned());
     let base_url = Data::new(application_settings.base_url.to_owned());
 
     run(
