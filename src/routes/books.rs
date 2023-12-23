@@ -74,7 +74,7 @@ pub async fn post_book(
     .execute(pool.as_ref())
     .await
     {
-        Ok(_) => HttpResponse::Ok().finish(),
+        Ok(_) => HttpResponse::Ok().json("Success"),
         Err(e) => {
             println!("Failed to execute query: {}", e);
             HttpResponse::InternalServerError().finish()

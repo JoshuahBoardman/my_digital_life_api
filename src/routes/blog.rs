@@ -1,4 +1,4 @@
-use crate::model::blog::Blog;
+use crate::{model::blog::Blog, extractors::authentication_token::AuthenticationToken};
 use actix_web::{
     error::ErrorInternalServerError, get, post, web, HttpResponse, Result as ActixResult, Scope,
 };
@@ -40,7 +40,7 @@ pub async fn get_blog_post(
     }
 }
 
-#[get("/")]
+#[get("")]
 pub async fn get_blog_posts(pool: web::Data<PgPool>) -> ActixResult<HttpResponse> {
     match sqlx::query_as!(
         Blog,
@@ -48,7 +48,7 @@ pub async fn get_blog_posts(pool: web::Data<PgPool>) -> ActixResult<HttpResponse
             SELECT * FROM blog_posts
         ",
     )
-    .fetch_one(pool.get_ref())
+    .fetch_all(pool.get_ref())
     .await
     {
         Ok(posts) => Ok(HttpResponse::Ok().json(posts)),
@@ -63,6 +63,7 @@ pub async fn get_blog_posts(pool: web::Data<PgPool>) -> ActixResult<HttpResponse
 pub async fn post_blog_post(
     blog: web::Json<Blog>,
     pool: web::Data<PgPool>,
+    _: AuthenticationToken
 ) -> ActixResult<HttpResponse> {
     match sqlx::query_as!(
         Blog,
@@ -77,10 +78,10 @@ pub async fn post_blog_post(
         Utc::now(),
         Utc::now()
     )
-    .fetch_one(pool.get_ref())
+    .execute(pool.get_ref())
     .await
     {
-        Ok(_) => Ok(HttpResponse::Ok().finish()),
+        Ok(_) => Ok(HttpResponse::Ok().json("Success")),
         Err(err) => Err(ErrorInternalServerError(format!(
             "Failed to post the blog post requested - {}",
             err
