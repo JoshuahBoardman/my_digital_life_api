@@ -1,4 +1,4 @@
-use crate::{model::blog::Blog, extractors::authentication_token::AuthenticationToken};
+use crate::{extractors::authentication_token::AuthenticationToken, model::blog::Blog};
 use actix_web::{
     error::ErrorInternalServerError, get, post, web, HttpResponse, Result as ActixResult, Scope,
 };
@@ -22,11 +22,11 @@ pub async fn get_blog_post(
 
     match sqlx::query_as!(
         Blog,
-        "
+        r#"
             SELECT * FROM blog_posts
             WHERE id = $1 
             LIMIT 1
-        ",
+        "#,
         post_id
     )
     .fetch_one(pool.get_ref())
@@ -44,9 +44,9 @@ pub async fn get_blog_post(
 pub async fn get_blog_posts(pool: web::Data<PgPool>) -> ActixResult<HttpResponse> {
     match sqlx::query_as!(
         Blog,
-        "
+        r#"
             SELECT * FROM blog_posts
-        ",
+        "#,
     )
     .fetch_all(pool.get_ref())
     .await
@@ -63,14 +63,14 @@ pub async fn get_blog_posts(pool: web::Data<PgPool>) -> ActixResult<HttpResponse
 pub async fn post_blog_post(
     blog: web::Json<Blog>,
     pool: web::Data<PgPool>,
-    _: AuthenticationToken
+    _: AuthenticationToken,
 ) -> ActixResult<HttpResponse> {
     match sqlx::query_as!(
         Blog,
-        "
+        r#"
             INSERT INTO blog_posts (id, author_id, title, body, last_updated, inserted_at)
             VALUES ($1, $2, $3, $4, $5, $6) 
-        ",
+        "#,
         Uuid::new_v4(),
         blog.author_id,
         blog.title,

@@ -20,10 +20,10 @@ pub async fn get_book_by_id(
     let book_id: Uuid = path.into_inner();
     match sqlx::query_as!(
         Book,
-        "
+        r#"
             SELECT id, name, author, description, rating, review, finished, inserted_at
             FROM books WHERE id = $1
-        ",
+        "#,
         book_id
     )
     .fetch_one(pool.get_ref())
@@ -38,10 +38,10 @@ pub async fn get_book_by_id(
 pub async fn get_books(pool: web::Data<PgPool>) -> Result<HttpResponse, Error> {
     match sqlx::query_as!(
         Book,
-        "
+        r#"
         SELECT id, name, author, description, rating, review, finished, inserted_at 
         FROM books
-        "
+        "#
     )
     .fetch_all(pool.as_ref())
     .await

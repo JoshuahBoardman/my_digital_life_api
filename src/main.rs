@@ -3,8 +3,8 @@ pub mod configuration;
 use actix_web::web::Data;
 use configuration::get_configuration;
 use digital_bookshelf_api::{email_client::EmailClient, /*model::auth::Secret,*/ run};
-use sqlx::PgPool;
 use secrecy::Secret;
+use sqlx::PgPool;
 
 #[actix_web::main]
 async fn main() -> Result<(), std::io::Error> {

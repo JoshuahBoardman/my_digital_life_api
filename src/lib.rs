@@ -7,12 +7,12 @@ mod routes;
 use actix_web::dev::Server;
 use actix_web::{web::Data, App, HttpServer};
 use email_client::EmailClient;
-use model::{/*auth::Secret,*/ common::Url};
+use model::common::Url;
 use routes::health_check::health_check;
 use routes::{auth::auth_scope, blog::blog_scope, books::book_shelf_scope};
+use secrecy::Secret;
 use sqlx::PgPool;
 use std::net::TcpListener;
-use secrecy::Secret;
 
 pub fn run(
     //TODO: pass base_url into app sate

@@ -6,7 +6,7 @@ use crate::{
         common::Url,
     },
 };
-use actix_web::error::{ErrorInternalServerError, ErrorUnprocessableEntity};
+use actix_web::error::ErrorInternalServerError;
 use actix_web::{
     cookie::{time, Cookie, SameSite},
     error::{Error as actix_error, ErrorUnauthorized},
@@ -15,10 +15,9 @@ use actix_web::{
 use chrono::{prelude::*, Duration};
 use jsonwebtoken::{encode, EncodingKey, Header};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
-use regex::Regex;
+use secrecy::{ExposeSecret, Secret};
 use sqlx::PgPool;
 use uuid::Uuid;
-use secrecy::{Secret, ExposeSecret};
 
 pub fn auth_scope() -> Scope {
     web::scope("/auth").service(login).service(verify)
@@ -33,56 +32,11 @@ pub async fn verify(
 ) -> Result<HttpResponse, actix_error> {
     let user_verification_code: String = path.into_inner();
 
-    let verification_code = match sqlx::query_as!(
-        VerificationCode,
-        "
-                DELETE FROM verification_codes
-                WHERE code = $1
-                RETURNING *;
-            ",
-        user_verification_code
-    )
-    .fetch_one(pool.get_ref())
-    .await
-    {
-        Ok(code) => code as VerificationCode,
-        Err(err) => {
-            return Err(ErrorInternalServerError(format!(
-                "Invaild verification code - {}",
-                err
-            )))
-        }
-    };
+    let verification_code = VerificationCode::from_database(&user_verification_code, &pool).await?;
 
-    let verification_code_experation = verification_code.expires_at;
+    verification_code.verify()?;
 
-    let naive_current_time = Utc::now().naive_utc();
-
-    if naive_current_time > verification_code_experation {
-        return Err(ErrorUnauthorized(
-            "The verification token provided has expired, please login to recieve a new token",
-        ));
-    }
-
-    let user_record = match sqlx::query_as!(
-        User,
-        "
-            SELECT * FROM users
-            WHERE id = $1; 
-        ",
-        verification_code.user_id
-    )
-    .fetch_one(pool.get_ref())
-    .await
-    {
-        Ok(user) => user,
-        Err(err) => {
-            return Err(ErrorInternalServerError(format!(
-                "Failed to find user record - {}",
-                err
-            )))
-        }
-    };
+    let user_record = User::from_database_by_id(&verification_code.user_id, &pool).await?;
 
     let experation_timestamp = (Utc::now() + Duration::hours(1)).naive_utc();
 
@@ -119,7 +73,8 @@ pub async fn verify(
         .secure(true)
         .finish();
 
-    Ok(HttpResponse::Ok().cookie(cookie).json(token)) //TODO dont send token
+    Ok(HttpResponse::Ok().cookie(cookie).json(token)) //TODO dont send token, should be a success
+                                                      //msg
 }
 
 #[post("login")]
@@ -131,32 +86,7 @@ pub async fn login(
 ) -> Result<HttpResponse, actix_error> {
     let user_email: String = req_body.user_email.to_owned().to_string();
 
-    let email_regex = Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").unwrap();
-
-    if !(email_regex.is_match(&user_email)) {
-        return Err(ErrorUnprocessableEntity("The email provided is invalid"));
-    }
-
-    // TODO: Make this a method on the user struct
-    let user_record = match sqlx::query_as!(
-        User,
-        "
-                SELECT id, user_name, email, inserted_at 
-                FROM users WHERE email = $1
-            ",
-        user_email
-    )
-    .fetch_one(pool.get_ref())
-    .await
-    {
-        Ok(user) => user as User,
-        Err(err) => {
-            return Err(ErrorInternalServerError(format!(
-                "User not found - {}",
-                err
-            )))
-        }
-    };
+    let user_record = User::from_database_by_email(&user_email, &pool).await?;
 
     let rand_string: String = thread_rng()
         .sample_iter(&Alphanumeric)
@@ -173,6 +103,7 @@ pub async fn login(
         inserted_at,
     };
 
+    // REFACTOR INTO VerificationCode::post_in_database - starting here
     //TODO: make this a method on the verificationcode struct
     //TODO: check if there is already a code and delete the previous one if there is
     let verification_code_result = sqlx::query!(
@@ -194,7 +125,7 @@ pub async fn login(
             "Failed to insert verifcation code - {}",
             err
         )));
-    }
+    } // - ending here
 
     let magic_link = format!("{}/auth/verify/{}", base_url.as_str(), rand_string);
 

@@ -1,6 +1,6 @@
 use dotenvy::dotenv;
-use std::{env, net::TcpListener};
 use secrecy::Secret;
+use std::{env, net::TcpListener};
 
 #[derive(serde::Deserialize)]
 pub struct Settings {
@@ -15,7 +15,7 @@ pub struct ApplicationSettings {
     pub port: u16,
     pub base_url: String,
     pub secret: Secret<String>, // TODO: may want to add something like secrecy to obscure the secret (keep
-                        // things tight)
+                                // things tight)
 }
 
 impl ApplicationSettings {
