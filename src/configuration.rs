@@ -14,8 +14,7 @@ pub struct ApplicationSettings {
     pub host: String,
     pub port: u16,
     pub base_url: String,
-    pub secret: Secret<String>, // TODO: may want to add something like secrecy to obscure the secret (keep
-                                // things tight)
+    pub secret: Secret<String>, 
 }
 
 impl ApplicationSettings {

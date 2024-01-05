@@ -67,4 +67,28 @@ impl VerificationCode {
         }
         Ok(())
     }
+
+    pub async fn post_in_database(&self, connection_pool: &Data<PgPool>) -> ActixResult<()> {
+        //TODO: check if there is already a code and delete the previous one if there is
+        match sqlx::query!(
+            r#"
+            INSERT INTO verification_codes (id, code, expires_at, user_id, inserted_at) 
+            VALUES ($1, $2, $3, $4, $5)
+            "#,
+            self.id,
+            self.code,
+            self.expires_at,
+            self.user_id,
+            self.inserted_at,
+        )
+        .execute(connection_pool.get_ref())
+        .await
+        {
+            Err(err) => Err(error::ErrorInternalServerError(format!(
+                "Failed to insert verifcation code - {}",
+                err
+            ))),
+            _ => Ok(()),
+        }
+    }
 }

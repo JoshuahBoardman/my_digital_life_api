@@ -15,7 +15,6 @@ use sqlx::PgPool;
 use std::net::TcpListener;
 
 pub fn run(
-    //TODO: pass base_url into app sate
     listener: TcpListener,
     db_pool: Data<PgPool>,
     email_client: Data<EmailClient>,

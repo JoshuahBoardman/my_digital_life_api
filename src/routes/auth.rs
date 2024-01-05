@@ -102,30 +102,8 @@ pub async fn login(
         expires_at: (inserted_at + Duration::hours(1)).naive_utc(),
         inserted_at,
     };
-
-    // REFACTOR INTO VerificationCode::post_in_database - starting here
-    //TODO: make this a method on the verificationcode struct
-    //TODO: check if there is already a code and delete the previous one if there is
-    let verification_code_result = sqlx::query!(
-        r#"
-            INSERT INTO verification_codes (id, code, expires_at, user_id, inserted_at) 
-            VALUES ($1, $2, $3, $4, $5)
-            "#,
-        user_verificaton_code.id,
-        user_verificaton_code.code,
-        user_verificaton_code.expires_at,
-        user_verificaton_code.user_id,
-        user_verificaton_code.inserted_at,
-    )
-    .execute(pool.get_ref())
-    .await;
-
-    if let Err(err) = verification_code_result {
-        return Err(ErrorInternalServerError(format!(
-            "Failed to insert verifcation code - {}",
-            err
-        )));
-    } // - ending here
+    //TODO: Test this method
+    user_verificaton_code.post_in_database(&pool).await?;
 
     let magic_link = format!("{}/auth/verify/{}", base_url.as_str(), rand_string);
 
