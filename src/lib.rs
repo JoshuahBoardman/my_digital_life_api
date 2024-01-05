@@ -8,8 +8,7 @@ use actix_web::dev::Server;
 use actix_web::{web::Data, App, HttpServer};
 use email_client::EmailClient;
 use model::common::Url;
-use routes::health_check::health_check;
-use routes::{auth::auth_scope, blog::blog_scope, books::book_shelf_scope};
+use routes::{health_check::health_check, v1::v1_scope};
 use secrecy::Secret;
 use sqlx::PgPool;
 use std::net::TcpListener;
@@ -28,9 +27,7 @@ pub fn run(
             .app_data(secret.clone())
             .app_data(base_rul.clone())
             .service(health_check)
-            .service(book_shelf_scope())
-            .service(auth_scope())
-            .service(blog_scope())
+            .service(v1_scope())
     })
     .listen(listener)?
     .run();
