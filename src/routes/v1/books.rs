@@ -1,5 +1,5 @@
 use crate::model::book::Book;
-use crate::{extractors::authentication_token::AuthenticationToken, routes::JsonError};
+use crate::{errors::JsonError, extractors::authentication_token::AuthenticationToken};
 use actix_web::{get, post, web, web::Json, HttpResponse, Result, Scope};
 use chrono::Utc;
 use reqwest::StatusCode;

@@ -1,5 +1,5 @@
 use crate::{
-    extractors::authentication_token::AuthenticationToken, model::blog::Blog, routes::JsonError,
+    errors::JsonError, extractors::authentication_token::AuthenticationToken, model::blog::Blog,
 };
 use actix_web::{get, post, web, HttpResponse, Scope};
 use chrono::Utc;

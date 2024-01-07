@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
-use crate::routes::JsonError;
+use crate::errors::JsonError;
 
 /*#[derive(Serialize, Deserialize)]
 pub struct Secret(pub String);*/

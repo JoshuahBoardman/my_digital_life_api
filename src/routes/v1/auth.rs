@@ -1,10 +1,10 @@
-use crate::model::user::User;
-use crate::routes::JsonError;
 use crate::{
     email_client::{EmailClient, TemplateModel},
+    errors::JsonError,
     model::{
         auth::{Claims, LoginRequestBody, /*Secret,*/ VerificationCode},
         common::Url,
+        user::User,
     },
 };
 use actix_web::{

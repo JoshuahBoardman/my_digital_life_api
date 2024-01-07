@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
-use crate::routes::JsonError;
+use crate::errors::JsonError;
 
 #[derive(Deserialize, Serialize, FromRow, Debug)]
 pub struct User {

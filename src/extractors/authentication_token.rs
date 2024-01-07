@@ -1,10 +1,9 @@
-use crate::model::auth::Claims;
-use actix_web::{
-    error::ErrorUnauthorized, web, Error as ActixWebError, FromRequest, Result as ActixResult,
-};
+use crate::{errors::JsonError, model::auth::Claims};
+use actix_web::{web, FromRequest};
 use jsonwebtoken::{
     decode, errors::Error as JWTError, Algorithm, DecodingKey, TokenData, Validation,
 };
+use reqwest::StatusCode;
 use secrecy::{ExposeSecret, Secret};
 use serde::{Deserialize, Serialize};
 use std::future::{ready, Ready};
@@ -15,7 +14,7 @@ pub struct AuthenticationToken {
 }
 
 impl FromRequest for AuthenticationToken {
-    type Error = ActixWebError;
+    type Error = JsonError;
     type Future = Ready<Result<Self, Self::Error>>;
 
     fn from_request(req: &actix_web::HttpRequest, _: &mut actix_web::dev::Payload) -> Self::Future {
@@ -28,31 +27,35 @@ impl FromRequest for AuthenticationToken {
         let cookie = match req.cookie("authToken") {
             Some(cookie) => cookie,
             None => {
-                return ready(Err(ErrorUnauthorized(
-                    "Failed to find authentication cookie",
-                )))
+                return ready(Err(JsonError {
+                    response_message: "Failed to find authentication cookie".to_string(),
+                    error_code: StatusCode::UNAUTHORIZED,
+                }));
             }
         };
 
         let token = cookie.value();
         match validate_jwt(token, &secret) {
             Ok(claims) => ready(Ok(AuthenticationToken { claims: claims })),
-            Err(err) => ready(Err(err)),
+            Err(err) => ready(Err(JsonError {
+                response_message: format!("Error: Invalid authentication token - {}", err),
+                error_code: StatusCode::UNAUTHORIZED,
+            })),
         }
     }
 }
 
-fn validate_jwt(jwt: &str, secret: &str) -> ActixResult<Claims> {
+fn validate_jwt(jwt: &str, secret: &str) -> Result<Claims, JWTError> {
     let decode: Result<TokenData<Claims>, JWTError> = decode::<Claims>(
         jwt,
         &DecodingKey::from_secret(secret.as_ref()),
         &Validation::new(Algorithm::HS256),
     );
-
+    //TODO: find out what the below comment was for... FeelsBadMan q_q
     //if decode.
 
     match decode {
         Ok(token) => Ok(token.claims),
-        Err(err) => Err(ErrorUnauthorized(format!("JWT is invalid - {}", err))),
+        Err(err) => Err(err),
     }
 }
