@@ -1,8 +1,9 @@
-use crate::{extractors::authentication_token::AuthenticationToken, model::blog::Blog};
-use actix_web::{
-    error::ErrorInternalServerError, get, post, web, HttpResponse, Result as ActixResult, Scope,
+use crate::{
+    extractors::authentication_token::AuthenticationToken, model::blog::Blog, routes::JsonError,
 };
+use actix_web::{get, post, web, HttpResponse, Scope};
 use chrono::Utc;
+use reqwest::StatusCode;
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -17,7 +18,7 @@ pub fn blog_scope() -> Scope {
 pub async fn get_blog_post(
     path: web::Path<Uuid>,
     pool: web::Data<PgPool>,
-) -> ActixResult<HttpResponse> {
+) -> Result<HttpResponse, JsonError> {
     let post_id: Uuid = path.into_inner();
 
     match sqlx::query_as!(
@@ -33,15 +34,18 @@ pub async fn get_blog_post(
     .await
     {
         Ok(post) => Ok(HttpResponse::Ok().json(post)),
-        Err(err) => Err(ErrorInternalServerError(format!(
-            "Failed to retrieve a blog post with the provided id - {}",
-            err
-        ))),
+        Err(err) => Err(JsonError {
+            response_message: format!(
+                "Failed to retrieve a blog post with the provided id - {}",
+                err
+            ),
+            error_code: StatusCode::INTERNAL_SERVER_ERROR,
+        }),
     }
 }
 
 #[get("")]
-pub async fn get_blog_posts(pool: web::Data<PgPool>) -> ActixResult<HttpResponse> {
+pub async fn get_blog_posts(pool: web::Data<PgPool>) -> Result<HttpResponse, JsonError> {
     match sqlx::query_as!(
         Blog,
         r#"
@@ -52,10 +56,10 @@ pub async fn get_blog_posts(pool: web::Data<PgPool>) -> ActixResult<HttpResponse
     .await
     {
         Ok(posts) => Ok(HttpResponse::Ok().json(posts)),
-        Err(err) => Err(ErrorInternalServerError(format!(
-            "Failed to retrieve the requested blog posts - {}",
-            err
-        ))),
+        Err(err) => Err(JsonError {
+            response_message: format!("Failed to retrieve the requested blog posts - {}", err),
+            error_code: StatusCode::INTERNAL_SERVER_ERROR,
+        }),
     }
 }
 
@@ -64,7 +68,7 @@ pub async fn post_blog_post(
     blog: web::Json<Blog>,
     pool: web::Data<PgPool>,
     _: AuthenticationToken,
-) -> ActixResult<HttpResponse> {
+) -> Result<HttpResponse, JsonError> {
     match sqlx::query_as!(
         Blog,
         r#"
@@ -82,9 +86,9 @@ pub async fn post_blog_post(
     .await
     {
         Ok(_) => Ok(HttpResponse::Ok().json("Success")),
-        Err(err) => Err(ErrorInternalServerError(format!(
-            "Failed to post the blog post requested - {}",
-            err
-        ))),
+        Err(err) => Err(JsonError {
+            response_message: format!("Failed to post the blog post requested - {}", err),
+            error_code: StatusCode::INTERNAL_SERVER_ERROR,
+        }),
     }
 }

@@ -1,4 +1,5 @@
 use crate::model::user::User;
+use crate::routes::JsonError;
 use crate::{
     email_client::{EmailClient, TemplateModel},
     model::{
@@ -6,15 +7,14 @@ use crate::{
         common::Url,
     },
 };
-use actix_web::error::ErrorInternalServerError;
 use actix_web::{
     cookie::{time, Cookie, SameSite},
-    error::{Error as actix_error, ErrorUnauthorized},
-    get, post, web, HttpResponse, Result, Scope,
+    get, post, web, HttpResponse, Scope,
 };
 use chrono::{prelude::*, Duration};
 use jsonwebtoken::{encode, EncodingKey, Header};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
+use reqwest::StatusCode;
 use secrecy::{ExposeSecret, Secret};
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -29,7 +29,7 @@ pub async fn verify(
     secret: web::Data<Secret<String>>,
     pool: web::Data<PgPool>,
     base_url: web::Data<Url>,
-) -> Result<HttpResponse, actix_error> {
+) -> Result<HttpResponse, JsonError> {
     let user_verification_code: String = path.into_inner();
 
     let verification_code = VerificationCode::from_database(&user_verification_code, &pool).await?;
@@ -54,10 +54,10 @@ pub async fn verify(
     ) {
         Ok(t) => t,
         Err(err) => {
-            return Err(ErrorInternalServerError(format!(
-                "Failed to encode JWT - {}",
-                err
-            )))
+            return Err(JsonError {
+                response_message: format!("Failed to encode JWT - {}", err),
+                error_code: StatusCode::INTERNAL_SERVER_ERROR,
+            })
         }
     };
 
@@ -83,7 +83,7 @@ pub async fn login(
     pool: web::Data<PgPool>,
     req_body: web::Json<LoginRequestBody>,
     base_url: web::Data<Url>,
-) -> Result<HttpResponse, actix_error> {
+) -> Result<HttpResponse, JsonError> {
     let user_email: String = req_body.user_email.to_owned().to_string();
 
     let user_record = User::from_database_by_email(&user_email, &pool).await?;
@@ -120,9 +120,9 @@ pub async fn login(
         .await
     {
         Ok(json) => Ok(HttpResponse::Ok().json(format!("success, {}", json))),
-        Err(error) => {
-            println!("Issue sending email - {}", error);
-            Err(ErrorUnauthorized(error.to_string()))
-        }
+        Err(error) => Err(JsonError {
+            response_message: format!("issue sending email - {}", error),
+            error_code: StatusCode::UNAUTHORIZED,
+        }),
     }
 }

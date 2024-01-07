@@ -1,9 +1,12 @@
-use actix_web::{error, web::Data, Result as ActixRsult};
+use actix_web::web::Data;
 use chrono::{DateTime, Utc};
 use regex::Regex;
+use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
+
+use crate::routes::JsonError;
 
 #[derive(Deserialize, Serialize, FromRow, Debug)]
 pub struct User {
@@ -18,7 +21,7 @@ impl User {
     pub async fn from_database_by_id(
         user_id: &Uuid,
         connection_pool: &Data<PgPool>,
-    ) -> ActixRsult<Self> {
+    ) -> Result<Self, JsonError> {
         match sqlx::query_as!(
             User,
             r#"
@@ -32,10 +35,10 @@ impl User {
         {
             Ok(user) => Ok(user),
             Err(err) => {
-                return Err(error::ErrorInternalServerError(format!(
-                    "User not found - {}",
-                    err
-                )))
+                return Err(JsonError {
+                    response_message: format!("User not found - {}", err).to_string(),
+                    error_code: StatusCode::INTERNAL_SERVER_ERROR,
+                })
             }
         }
     }
@@ -43,15 +46,15 @@ impl User {
     pub async fn from_database_by_email(
         user_email: &str,
         connection_pool: &Data<PgPool>,
-    ) -> ActixRsult<Self> {
+    ) -> Result<Self, JsonError> {
         let email_regex = Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").unwrap();
 
         if !(email_regex.is_match(&user_email)) {
-            return Err(error::ErrorUnprocessableEntity(
-                "The email provided is invalid",
-            ));
+            return Err(JsonError {
+                response_message: "The email provided is invalid".to_string(),
+                error_code: StatusCode::UNPROCESSABLE_ENTITY,
+            });
         }
-
         match sqlx::query_as!(
             User,
             r#"
@@ -65,10 +68,10 @@ impl User {
         {
             Ok(user) => Ok(user),
             Err(err) => {
-                return Err(error::ErrorInternalServerError(format!(
-                    "User not found - {}",
-                    err
-                )))
+                return Err(JsonError {
+                    response_message: format!("User not found - {}", err),
+                    error_code: StatusCode::INTERNAL_SERVER_ERROR,
+                })
             }
         }
     }

@@ -1,8 +1,11 @@
-use actix_web::{error, web::Data, Result as ActixResult};
+use actix_web::web::Data;
 use chrono::{DateTime, NaiveDateTime, Utc};
+use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
+
+use crate::routes::JsonError;
 
 /*#[derive(Serialize, Deserialize)]
 pub struct Secret(pub String);*/
@@ -34,7 +37,7 @@ impl VerificationCode {
     pub async fn from_database(
         verification_code: &str,
         connection_pool: &Data<PgPool>,
-    ) -> ActixResult<Self> {
+    ) -> Result<Self, JsonError> {
         match sqlx::query_as!(
             VerificationCode,
             "
@@ -49,26 +52,27 @@ impl VerificationCode {
         {
             Ok(code) => Ok(code as VerificationCode),
             Err(err) => {
-                return Err(error::ErrorInternalServerError(format!(
-                    "Invaild verification code - {}",
-                    err
-                )))
+                return Err(JsonError {
+                    response_message: format!("Invaild verification code - {}", err),
+                    error_code: StatusCode::INTERNAL_SERVER_ERROR,
+                })
             }
         }
     }
 
-    pub fn verify(&self) -> ActixResult<()> {
+    pub fn verify(&self) -> Result<(), JsonError> {
         let naive_current_time = Utc::now().naive_utc();
 
         if naive_current_time > self.expires_at {
-            return Err(error::ErrorUnauthorized(
-                "The verification token provided has expired, please login to recieve a new token",
-            ));
+            return Err(JsonError {
+                response_message: "The verification token provided has expired, please login to recieve a new token".to_string(),
+                error_code: StatusCode::UNAUTHORIZED,
+            });
         }
         Ok(())
     }
 
-    pub async fn post_in_database(&self, connection_pool: &Data<PgPool>) -> ActixResult<()> {
+    pub async fn post_in_database(&self, connection_pool: &Data<PgPool>) -> Result<(), JsonError> {
         //TODO: check if there is already a code and delete the previous one if there is
         match sqlx::query!(
             r#"
@@ -84,10 +88,10 @@ impl VerificationCode {
         .execute(connection_pool.get_ref())
         .await
         {
-            Err(err) => Err(error::ErrorInternalServerError(format!(
-                "Failed to insert verifcation code - {}",
-                err
-            ))),
+            Err(err) => Err(JsonError {
+                response_message: format!("Failed to insert verifcation code - {}", err),
+                error_code: StatusCode::INTERNAL_SERVER_ERROR,
+            }),
             _ => Ok(()),
         }
     }

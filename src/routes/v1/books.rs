@@ -1,7 +1,8 @@
-use crate::extractors::authentication_token::AuthenticationToken;
 use crate::model::book::Book;
-use actix_web::{error::Error, get, post, web, web::Json, HttpResponse, Result, Scope};
+use crate::{extractors::authentication_token::AuthenticationToken, routes::JsonError};
+use actix_web::{get, post, web, web::Json, HttpResponse, Result, Scope};
 use chrono::Utc;
+use reqwest::StatusCode;
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -16,7 +17,7 @@ pub fn book_shelf_scope() -> Scope {
 pub async fn get_book_by_id(
     path: web::Path<Uuid>,
     pool: web::Data<PgPool>,
-) -> Result<HttpResponse, Error> {
+) -> Result<HttpResponse, JsonError> {
     let book_id: Uuid = path.into_inner();
     match sqlx::query_as!(
         Book,
@@ -30,12 +31,15 @@ pub async fn get_book_by_id(
     .await
     {
         Ok(book) => Ok(HttpResponse::Ok().json(book)),
-        Err(_) => Ok(HttpResponse::NotFound().json("Error: book not found")),
+        Err(err) => Err(JsonError {
+            response_message: format!("Error: Failed to fetch requested book - {}", err),
+            error_code: StatusCode::NOT_FOUND, //TODO: change error code set
+        }),
     }
 }
 
 #[get("/books")]
-pub async fn get_books(pool: web::Data<PgPool>) -> Result<HttpResponse, Error> {
+pub async fn get_books(pool: web::Data<PgPool>) -> Result<HttpResponse, JsonError> {
     match sqlx::query_as!(
         Book,
         r#"
@@ -47,7 +51,10 @@ pub async fn get_books(pool: web::Data<PgPool>) -> Result<HttpResponse, Error> {
     .await
     {
         Ok(books) => Ok(HttpResponse::Ok().json(books)),
-        Err(_) => Ok(HttpResponse::InternalServerError().finish()),
+        Err(err) => Err(JsonError {
+            response_message: format!("Error: Failed to fetch requested books - {}", err),
+            error_code: StatusCode::INTERNAL_SERVER_ERROR,
+        }),
     }
 }
 
@@ -56,7 +63,7 @@ pub async fn post_book(
     book: Json<Book>,
     pool: web::Data<PgPool>,
     _: AuthenticationToken,
-) -> HttpResponse {
+) -> Result<HttpResponse, JsonError> {
     match sqlx::query!(
         r#"
     INSERT INTO books (id, name, author, description, rating, review, finished, inserted_at)
@@ -74,10 +81,10 @@ pub async fn post_book(
     .execute(pool.as_ref())
     .await
     {
-        Ok(_) => HttpResponse::Ok().json("Success"),
-        Err(e) => {
-            println!("Failed to execute query: {}", e);
-            HttpResponse::InternalServerError().finish()
-        }
+        Ok(_) => Ok(HttpResponse::Ok().json("Success")),
+        Err(e) => Err(JsonError {
+            response_message: format!("Failed to execute query: {}", e),
+            error_code: StatusCode::INTERNAL_SERVER_ERROR,
+        }),
     }
 }
