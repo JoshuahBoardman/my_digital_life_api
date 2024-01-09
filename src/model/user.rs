@@ -11,8 +11,8 @@ use crate::errors::JsonError;
 #[derive(Deserialize, Serialize, FromRow, Debug)]
 pub struct User {
     pub id: Uuid,
-    pub user_name: String, //TODO: Sanatize this
-    pub email: String,     // TODO: Valideate this and Sanatize it
+    pub user_name: String,
+    pub email: String,
     pub inserted_at: DateTime<Utc>,
 }
 

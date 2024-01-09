@@ -36,7 +36,7 @@ pub async fn get_blog_post(
         Ok(post) => Ok(HttpResponse::Ok().json(post)),
         Err(err) => Err(JsonError {
             response_message: format!(
-                "Failed to retrieve a blog post with the provided id - {}",
+                "Error: Failed to retrieve a record with the provided id - {}",
                 err
             ),
             error_code: StatusCode::INTERNAL_SERVER_ERROR,
@@ -57,7 +57,7 @@ pub async fn get_blog_posts(pool: web::Data<PgPool>) -> Result<HttpResponse, Jso
     {
         Ok(posts) => Ok(HttpResponse::Ok().json(posts)),
         Err(err) => Err(JsonError {
-            response_message: format!("Failed to retrieve the requested blog posts - {}", err),
+            response_message: format!("Error: Failed to retrieve the requested records - {}", err),
             error_code: StatusCode::INTERNAL_SERVER_ERROR,
         }),
     }
@@ -87,7 +87,7 @@ pub async fn post_blog_post(
     {
         Ok(_) => Ok(HttpResponse::Ok().json("Success")),
         Err(err) => Err(JsonError {
-            response_message: format!("Failed to post the blog post requested - {}", err),
+            response_message: format!("Error: Failed to post the data requested - {}", err),
             error_code: StatusCode::INTERNAL_SERVER_ERROR,
         }),
     }

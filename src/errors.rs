@@ -4,6 +4,8 @@ use std::fmt::Display;
 
 #[derive(Debug)]
 pub struct JsonError {
+    // TODO: May want to make this send different error codes, depending on
+    // the error returned from sqlx
     pub response_message: String,
     pub error_code: StatusCode,
 }

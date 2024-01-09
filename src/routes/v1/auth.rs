@@ -9,7 +9,7 @@ use crate::{
 };
 use actix_web::{
     cookie::{time, Cookie, SameSite},
-    get, post, web, HttpResponse, Scope,
+    post, web, HttpResponse, Scope,
 };
 use chrono::{prelude::*, Duration};
 use jsonwebtoken::{encode, EncodingKey, Header};
@@ -23,7 +23,7 @@ pub fn auth_scope() -> Scope {
     web::scope("/auth").service(login).service(verify)
 }
 
-#[get("/verify/{code}")]
+#[post("/verify/{code}")]
 pub async fn verify(
     path: web::Path<String>,
     secret: web::Data<Secret<String>>,
@@ -52,10 +52,10 @@ pub async fn verify(
         &claims,
         &EncodingKey::from_secret(secret.expose_secret().as_ref()),
     ) {
-        Ok(t) => t,
+        Ok(jwt) => jwt,
         Err(err) => {
             return Err(JsonError {
-                response_message: format!("Failed to encode JWT - {}", err),
+                response_message: format!("Error: Failed to encode JWT - {}", err),
                 error_code: StatusCode::INTERNAL_SERVER_ERROR,
             })
         }
@@ -73,8 +73,7 @@ pub async fn verify(
         .secure(true)
         .finish();
 
-    Ok(HttpResponse::Ok().cookie(cookie).json(token)) //TODO dont send token, should be a success
-                                                      //msg
+    Ok(HttpResponse::Ok().cookie(cookie).json("Success"))
 }
 
 #[post("login")]
@@ -102,10 +101,10 @@ pub async fn login(
         expires_at: (inserted_at + Duration::hours(1)).naive_utc(),
         inserted_at,
     };
-    //TODO: Test this method
+
     user_verificaton_code.post_in_database(&pool).await?;
 
-    let magic_link = format!("{}/auth/verify/{}", base_url.as_str(), rand_string);
+    let magic_link = format!("{}/v1/auth/verify/{}", base_url.as_str(), rand_string);
 
     let template_model = TemplateModel {
         magic_link: magic_link.as_ref(),
@@ -119,9 +118,9 @@ pub async fn login(
         .send_email(user_email, &template_id, "magic-link", &template_model)
         .await
     {
-        Ok(json) => Ok(HttpResponse::Ok().json(format!("success, {}", json))),
-        Err(error) => Err(JsonError {
-            response_message: format!("issue sending email - {}", error),
+        Ok(_) => Ok(HttpResponse::Ok().json("Success")),
+        Err(err) => Err(JsonError {
+            response_message: format!("Error: Issue sending email - {}", err),
             error_code: StatusCode::UNAUTHORIZED,
         }),
     }

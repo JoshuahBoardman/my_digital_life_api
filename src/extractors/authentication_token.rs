@@ -10,6 +10,7 @@ use std::future::{ready, Ready};
 
 #[derive(Serialize, Deserialize)]
 pub struct AuthenticationToken {
+    // TODO: Maybe swap this to be a gaurd instead of extractor - https://docs.rs/actix-web/latest/actix_web/guard/index.html
     pub claims: Claims,
 }
 

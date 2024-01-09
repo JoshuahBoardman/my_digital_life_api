@@ -7,13 +7,13 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 pub fn book_shelf_scope() -> Scope {
-    web::scope("/book-shelf")
+    web::scope("/books")
         .service(get_book_by_id)
         .service(get_books)
         .service(post_book)
 }
 
-#[get("/books/{bookId}")]
+#[get("/{bookId}")]
 pub async fn get_book_by_id(
     path: web::Path<Uuid>,
     pool: web::Data<PgPool>,
@@ -32,13 +32,13 @@ pub async fn get_book_by_id(
     {
         Ok(book) => Ok(HttpResponse::Ok().json(book)),
         Err(err) => Err(JsonError {
-            response_message: format!("Error: Failed to fetch requested book - {}", err),
-            error_code: StatusCode::NOT_FOUND, //TODO: change error code set
+            response_message: format!("Error: Failed to fetch requested record - {}", err),
+            error_code: StatusCode::INTERNAL_SERVER_ERROR, //TODO: change error code set
         }),
     }
 }
 
-#[get("/books")]
+#[get("")]
 pub async fn get_books(pool: web::Data<PgPool>) -> Result<HttpResponse, JsonError> {
     match sqlx::query_as!(
         Book,
@@ -52,13 +52,13 @@ pub async fn get_books(pool: web::Data<PgPool>) -> Result<HttpResponse, JsonErro
     {
         Ok(books) => Ok(HttpResponse::Ok().json(books)),
         Err(err) => Err(JsonError {
-            response_message: format!("Error: Failed to fetch requested books - {}", err),
+            response_message: format!("Error: Failed to fetch requested records - {}", err),
             error_code: StatusCode::INTERNAL_SERVER_ERROR,
         }),
     }
 }
 
-#[post("books")]
+#[post("/new")]
 pub async fn post_book(
     book: Json<Book>,
     pool: web::Data<PgPool>,
@@ -82,8 +82,8 @@ pub async fn post_book(
     .await
     {
         Ok(_) => Ok(HttpResponse::Ok().json("Success")),
-        Err(e) => Err(JsonError {
-            response_message: format!("Failed to execute query: {}", e),
+        Err(err) => Err(JsonError {
+            response_message: format!("Error: Failed to post the requested data - {}", err),
             error_code: StatusCode::INTERNAL_SERVER_ERROR,
         }),
     }
