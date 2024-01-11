@@ -10,9 +10,16 @@ pub struct EmailClient {
 }
 
 impl EmailClient {
-    pub fn new(base_url: String, sender: String, authorization_token: String) -> Self {
+    pub fn new(
+        base_url: String,
+        sender: String,
+        authorization_token: String,
+        timeout: std::time::Duration,
+    ) -> Self {
+        let http_client = Client::builder().timeout(timeout).build().unwrap();
+
         EmailClient {
-            http_client: Client::new(),
+            http_client,
             base_url,
             sender,
             authorization_token,
@@ -28,7 +35,7 @@ impl EmailClient {
         template_model: &TemplateModel<'_>,
         /*html_body: &str,
         text_body: &str,*/
-    ) -> Result<String, reqwest::Error> {
+    ) -> Result<(), reqwest::Error> {
         let url = format!("{}/email/withTemplate/", &self.base_url);
         let email_body = EmailRequest {
             from: &self.sender,
@@ -41,8 +48,7 @@ impl EmailClient {
             text_body: text_body,*/
         };
 
-        let builder = self
-            .http_client
+        self.http_client
             .post(url)
             .header("X-Postmark-server-token", &self.authorization_token)
             .header("Accept", "application/json") //TODO: user headers instead of header
@@ -50,10 +56,9 @@ impl EmailClient {
             .json(&email_body)
             .send()
             .await?
-            .text()
-            .await?;
+            .error_for_status()?;
 
-        Ok(builder) // TODO: needs to have error handling
+        Ok(())
     }
 }
 

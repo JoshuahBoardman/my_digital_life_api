@@ -2,7 +2,7 @@ pub mod configuration;
 
 use actix_web::web::Data;
 use configuration::get_configuration;
-use digital_bookshelf_api::{email_client::EmailClient, /*model::auth::Secret,*/ startup::run};
+use digital_bookshelf_api::{email_client::EmailClient, /*model::auth::Secret,*/ startup::run,};
 use secrecy::Secret;
 use sqlx::PgPool;
 
@@ -26,6 +26,8 @@ async fn main() -> Result<(), std::io::Error> {
         email_client_settings.base_url.to_owned(),
         email_client_settings.sender_address.to_owned(),
         email_client_settings.authorization_token.to_owned(),
+        std::time::Duration::from_secs(10), //Maybe: Move the setting of this value to the config
+                                            //file
     ));
 
     let application_settings = &configuration_settings.application;

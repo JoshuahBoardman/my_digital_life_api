@@ -1,10 +1,10 @@
-use actix_web::dev::Server;
-use actix_web::{web::Data, App, HttpServer};
 use crate::{
+    email_client::EmailClient,
     model::common::Url,
     routes::{health_check::health_check, v1::v1_scope},
-    email_client::EmailClient
 };
+use actix_web::dev::Server;
+use actix_web::{web::Data, App, HttpServer};
 use secrecy::Secret;
 use sqlx::PgPool;
 use std::net::TcpListener;
