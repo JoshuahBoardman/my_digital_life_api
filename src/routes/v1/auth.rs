@@ -115,7 +115,7 @@ pub async fn login(
     let template_id = 34154243;
 
     match email_client
-        .send_email(user_email, &template_id, "magic-link", &template_model)
+        .send_email(&user_email, &template_id, "magic-link", &template_model)
         .await
     {
         Ok(_) => Ok(HttpResponse::Ok().json("Success")),

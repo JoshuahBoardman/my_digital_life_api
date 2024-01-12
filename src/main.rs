@@ -25,7 +25,7 @@ async fn main() -> Result<(), std::io::Error> {
     let email_client = Data::new(EmailClient::new(
         email_client_settings.base_url.to_owned(),
         email_client_settings.sender_address.to_owned(),
-        email_client_settings.authorization_token.to_owned(),
+        Secret::new(email_client_settings.authorization_token.to_owned()),
         std::time::Duration::from_secs(10), //Maybe: Move the setting of this value to the config
                                             //file
     ));
