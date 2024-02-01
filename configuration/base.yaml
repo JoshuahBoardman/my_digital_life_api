@@ -1,0 +1,19 @@
+application:
+  port: 8000
+  secret: "this-is-a-secret-string-that-should-not-be-exposed-to-anyone"
+database:
+  host: "127.0.0.1"
+  port: 5432
+  user_name: "postgres"
+  password: "password"
+  database_name: "My_Digital_Life"
+  require_ssl: false
+email:
+  email_client:
+    base_url: "https://api.postmarkapp.com"
+    sender_address: "test@gmail.com"
+    authorization_token: "my-secret-token"
+    timeout_milliseconds: 10000
+  email_template:
+    template_id: 34154243
+    template_alias: "magic-link"

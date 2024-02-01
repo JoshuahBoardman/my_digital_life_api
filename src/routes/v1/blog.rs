@@ -9,8 +9,8 @@ use uuid::Uuid;
 
 pub fn blog_scope() -> Scope {
     web::scope("/posts")
-        .service(get_blog_post)
         .service(get_blog_posts)
+        .service(get_blog_post)
         .service(post_blog_post)
 }
 

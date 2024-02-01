@@ -1,5 +1,5 @@
 use crate::{
-    email_client::{EmailClient, TemplateModel},
+    email_client::{EmailClient, EmailTemplate, TemplateModel},
     errors::JsonError,
     model::{
         auth::{Claims, LoginRequestBody, /*Secret,*/ VerificationCode},
@@ -33,7 +33,6 @@ pub async fn verify(
     let user_verification_code: String = path.into_inner();
 
     let verification_code = VerificationCode::from_database(&user_verification_code, &pool).await?;
-
     verification_code.verify()?;
 
     let user_record = User::from_database_by_id(&verification_code.user_id, &pool).await?;
@@ -64,8 +63,7 @@ pub async fn verify(
     let cookie_duration = time::Duration::HOUR;
 
     let cookie = Cookie::build("authToken", token.to_owned())
-        /*.domain("www.joshuahboardman-api.com/") // TODO: get a domain called
-         * joshuahboardman-api for the api*/
+        //.domain(base_url.as_str())
         .path("/")
         .max_age(cookie_duration)
         .same_site(SameSite::Strict)
@@ -79,6 +77,7 @@ pub async fn verify(
 #[post("login")]
 pub async fn login(
     email_client: web::Data<EmailClient>,
+    email_template: web::Data<EmailTemplate>,
     pool: web::Data<PgPool>,
     req_body: web::Json<LoginRequestBody>,
     base_url: web::Data<Url>,
@@ -92,11 +91,12 @@ pub async fn login(
         .take(64)
         .map(char::from)
         .collect();
+
     let inserted_at: DateTime<Utc> = Utc::now();
 
     let user_verificaton_code = VerificationCode {
         id: Uuid::new_v4(),
-        user_id: user_record.id.to_owned(), //TODO: set this as the looked up user email GUID
+        user_id: user_record.id.to_owned(),
         code: rand_string.to_owned(),
         expires_at: (inserted_at + Duration::hours(1)).naive_utc(),
         inserted_at,
@@ -108,14 +108,16 @@ pub async fn login(
 
     let template_model = TemplateModel {
         magic_link: magic_link.as_ref(),
-        site_name: "JoshuahBoardman.com",
         user_name: user_record.user_name.as_str(),
     };
 
-    let template_id = 34154243;
-
     match email_client
-        .send_email(&user_email, &template_id, "magic-link", &template_model)
+        .send_email(
+            &user_email,
+            &email_template.template_id,
+            &email_template.template_alias,
+            &template_model,
+        )
         .await
     {
         Ok(_) => Ok(HttpResponse::Ok().json("Success")),

@@ -1,17 +1,21 @@
+use config::ConfigError;
 use dotenvy::dotenv;
-use secrecy::Secret;
-use std::{env, net::TcpListener};
+use secrecy::{ExposeSecret, Secret};
+use serde_aux::field_attributes::deserialize_number_from_string;
+use sqlx::postgres::{PgConnectOptions, PgSslMode};
+use std::net::TcpListener;
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, Debug)]
 pub struct Settings {
     pub application: ApplicationSettings,
     pub database: DatabaseSettings,
-    pub email_client: EmailClientSettings,
+    pub email: EmailSettings,
 }
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, Debug)]
 pub struct ApplicationSettings {
     pub host: String,
+    #[serde(deserialize_with = "deserialize_number_from_string")]
     pub port: u16,
     pub base_url: String,
     pub secret: Secret<String>,
@@ -24,82 +28,121 @@ impl ApplicationSettings {
     }
 }
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, Debug)]
 pub struct DatabaseSettings {
     pub user_name: String,
-    pub password: String,
+    pub password: Secret<String>,
+    #[serde(deserialize_with = "deserialize_number_from_string")]
     pub port: u16,
     pub host: String,
     pub database_name: String,
+    pub require_ssl: bool,
 }
 
 impl DatabaseSettings {
-    pub fn get_database_url(&self) -> String {
-        format!(
-            "postgres://{}:{}@{}:{}/{}",
-            self.user_name, self.password, self.host, self.port, self.database_name
-        )
+    pub fn without_db(&self) -> PgConnectOptions {
+        let ssl_mode = if self.require_ssl {
+            PgSslMode::Require
+        } else {
+            PgSslMode::Prefer
+        };
+        PgConnectOptions::new()
+            .host(&self.host)
+            .username(&self.user_name)
+            .password(self.password.expose_secret())
+            .port(self.port)
+            .ssl_mode(ssl_mode)
+    }
+
+    pub fn with_db(&self) -> PgConnectOptions {
+        self.without_db().database(&self.database_name)
     }
 }
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, Debug)]
+pub struct EmailSettings {
+    pub email_client: EmailClientSettings,
+    pub email_template: EmailTemplateSettings,
+}
+
+#[derive(serde::Deserialize, Debug)]
 pub struct EmailClientSettings {
     pub base_url: String,
     pub sender_address: String,
-    pub authorization_token: String,
+    pub authorization_token: Secret<String>,
+    #[serde(deserialize_with = "deserialize_number_from_string")]
+    pub timeout_milliseconds: u64,
 }
 
-pub fn get_configuration() -> Settings {
-    dotenv().expect("Error: unable to get .env variables");
+impl EmailClientSettings {
+    pub fn timeout(&self) -> std::time::Duration {
+        std::time::Duration::from_millis(self.timeout_milliseconds)
+    }
+}
 
-    let db_user = &env::var("DB_USER").expect("Error: DB_USER .env variable not found");
-    let db_password = &env::var("DB_PASSWORD").expect("Error: DB_PASSWORD .env variable not found");
-    let db_port = &env::var("DB_PORT").expect("Error: DB_PORT .env variable not found");
-    let db_host = &env::var("DB_HOST").expect("Error: DB_HOST .env variable not found");
-    let db_name = &env::var("DB_NAME").expect("Error: DB_NAME .env variable not found");
+#[derive(serde::Deserialize, Debug)]
+pub struct EmailTemplateSettings {
+    pub template_id: u32,
+    pub template_alias: String,
+}
 
-    let application_host =
-        &env::var("APPLICATION_HOST").expect("Error: APPLICATION_HOST .env variable not found");
-    let application_port =
-        &env::var("APPLICATION_PORT").expect("Error: APPLICATION_PORT .env variable not found");
-    let application_base_url = &env::var("APPLICATION_BASE_URL")
-        .expect("Error: APPLICATION_BASE_URL .env variable not found");
-    let application_secret =
-        &env::var("APPLICATION_SECRET").expect("Error: APPLICATION_SECRET .env variable not found");
+pub fn get_configuration() -> Result<Settings, ConfigError> {
+    let base_path = std::env::current_dir().expect("Failed to determine the current directory");
+    let configuration_directory = base_path.join("configuration");
 
-    let email_client_base_url = &env::var("EMAIL_CLIENT_BASE_URL")
-        .expect("Error: EMAIL_CLIENT_BASE_URL .env variable not found");
-    let email_client_sender_address = &env::var("EMAIL_CLIENT_SENDER_ADDRESS")
-        .expect("Error: EMAIL_CLIENT_SENDER_ADDRESS .env variable not found");
-    let email_client_authorization_token = &env::var("EMAIL_CLIENT_AUTHORIZATION_TOKEN")
-        .expect("Error: EMAIL_CLIENT_SENDER_ADDRESS .env variable not found");
+    let environment: Environment = std::env::var("APP_ENVIRONMENT")
+        .unwrap_or_else(|_| "local".into())
+        .try_into()
+        .expect("Failed to parse APP_ENVIRONMENT.");
 
-    let database_settings = DatabaseSettings {
-        user_name: db_user.to_string(),
-        password: db_password.to_string(),
-        port: db_port.parse::<u16>().expect("Erorr: value is not a u16"),
-        host: db_host.to_string(),
-        database_name: db_name.to_string(),
+    if let Environment::Local = environment {
+        dotenv().expect("Error: unable to get .env variables");
+        println!("env vars loaded");
     };
 
-    let application_settings = ApplicationSettings {
-        host: application_host.to_string(),
-        port: application_port
-            .parse::<u16>()
-            .expect("Error: value is not a u16"),
-        base_url: application_base_url.to_string(),
-        secret: Secret::new(application_secret.to_string()),
-    };
+    let environment_filename = format!("{}.yaml", environment.as_str());
+    let settings = config::Config::builder()
+        .add_source(config::File::from(
+            configuration_directory.join("base.yaml"),
+        ))
+        .add_source(config::File::from(
+            configuration_directory.join(environment_filename),
+        ))
+        .add_source(
+            config::Environment::with_prefix("APP")
+                .prefix_separator("_")
+                .separator("__"),
+        )
+        .build()?;
 
-    let email_client = EmailClientSettings {
-        base_url: email_client_base_url.to_string(),
-        sender_address: email_client_sender_address.to_string(),
-        authorization_token: email_client_authorization_token.to_string(),
-    };
+    settings.try_deserialize::<Settings>()
+}
 
-    Settings {
-        database: database_settings,
-        application: application_settings,
-        email_client: email_client,
+pub enum Environment {
+    Local,
+    Production,
+}
+
+impl Environment {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Environment::Local => "local",
+            Environment::Production => "production",
+        }
+    }
+}
+
+impl TryFrom<String> for Environment {
+    type Error = String;
+
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        match s.to_lowercase().as_str() {
+            "local" => Ok(Self::Local),
+            "production" => Ok(Self::Production),
+            other => Err(format!(
+                "{} is not a supported environment. Use either `local` or `production`.",
+                other
+            )),
+        }
     }
 }

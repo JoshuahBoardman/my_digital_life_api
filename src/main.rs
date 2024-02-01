@@ -1,43 +1,46 @@
 pub mod configuration;
 
-use actix_web::web::Data;
 use configuration::get_configuration;
-use digital_bookshelf_api::{email_client::EmailClient, /*model::auth::Secret,*/ startup::run,};
+use my_digital_life::{
+    email_client::{EmailClient, EmailTemplate},
+    startup::run,
+};
+use secrecy::ExposeSecret;
 use secrecy::Secret;
-use sqlx::PgPool;
+use sqlx::postgres::PgPoolOptions;
 
 #[actix_web::main]
 async fn main() -> Result<(), std::io::Error> {
-    let configuration_settings = get_configuration();
-
+    let configuration_settings = get_configuration().expect("Failed to load config settings");
     let database_settings = &configuration_settings.database;
-    let database_url = &database_settings.get_database_url();
+    let connection_pool = PgPoolOptions::new().connect_lazy_with(database_settings.with_db());
 
-    let connection_pool = PgPool::connect(&database_url)
-        .await
-        .expect("Failed to read configuration");
-    let connection_pool = Data::new(connection_pool);
+    let email_client_settings = &configuration_settings.email.email_client;
+    let timeout = email_client_settings.timeout();
 
-    let email_client_settings = &configuration_settings.email_client;
-
-    println!("{:#?}", email_client_settings.base_url);
-
-    let email_client = Data::new(EmailClient::new(
+    let email_client = EmailClient::new(
         email_client_settings.base_url.to_owned(),
         email_client_settings.sender_address.to_owned(),
-        Secret::new(email_client_settings.authorization_token.to_owned()),
-        std::time::Duration::from_secs(10), //Maybe: Move the setting of this value to the config
-                                            //file
-    ));
+        email_client_settings.authorization_token.to_owned(),
+        timeout,
+    );
+
+    let email_template_settings = &configuration_settings.email.email_template;
+
+    let email_template = EmailTemplate {
+        template_id: email_template_settings.template_id,
+        template_alias: email_template_settings.template_alias.to_owned(),
+    };
 
     let application_settings = &configuration_settings.application;
-    let app_secret: Data<Secret<String>> = Data::new(application_settings.secret.to_owned());
-    let base_url = Data::new(application_settings.base_url.to_owned());
+    let app_secret: Secret<String> = application_settings.secret.to_owned();
+    let base_url = application_settings.base_url.to_owned();
 
     run(
         application_settings.get_tcp_listener(),
         connection_pool,
         email_client,
+        email_template,
         app_secret,
         base_url,
     )?

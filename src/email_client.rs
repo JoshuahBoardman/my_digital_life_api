@@ -1,14 +1,13 @@
 use reqwest::Client;
+use secrecy::{ExposeSecret, Secret};
 use serde::Serialize;
-use secrecy::{Secret, ExposeSecret};
 
 pub struct EmailClient {
     http_client: Client,
     base_url: String,
     sender: String,
-    authorization_token: Secret<String>, 
+    authorization_token: Secret<String>,
 }
-
 impl EmailClient {
     pub fn new(
         base_url: String,
@@ -44,8 +43,11 @@ impl EmailClient {
 
         self.http_client
             .post(url)
-            .header("X-Postmark-server-token", &self.authorization_token.expose_secret().to_string())
-            .header("Accept", "application/json") 
+            .header(
+                "X-Postmark-Server-Token",
+                &self.authorization_token.expose_secret().to_string(),
+            )
+            .header("Accept", "application/json")
             .header("Content-Type", "application/json")
             .json(&email_body)
             .send()
@@ -56,7 +58,7 @@ impl EmailClient {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 #[serde(rename_all = "PascalCase")]
 pub struct EmailRequest<'a> {
     from: &'a str,
@@ -66,10 +68,14 @@ pub struct EmailRequest<'a> {
     template_model: &'a TemplateModel<'a>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 #[serde(rename_all = "snake_case")]
 pub struct TemplateModel<'a> {
     pub magic_link: &'a str,
-    pub site_name: &'a str,
     pub user_name: &'a str,
+}
+
+pub struct EmailTemplate {
+    pub template_id: u32,
+    pub template_alias: String,
 }
