@@ -63,7 +63,7 @@ pub async fn get_blog_posts(pool: web::Data<PgPool>) -> Result<HttpResponse, Jso
     }
 }
 
-#[post("/new")]
+#[post("")]
 pub async fn post_blog_post(
     blog: web::Json<Blog>,
     pool: web::Data<PgPool>,

@@ -58,7 +58,7 @@ pub async fn get_books(pool: web::Data<PgPool>) -> Result<HttpResponse, JsonErro
     }
 }
 
-#[post("/new")]
+#[post("")]
 pub async fn post_book(
     book: Json<Book>,
     pool: web::Data<PgPool>,

@@ -82,7 +82,7 @@ pub async fn login(
     req_body: web::Json<LoginRequestBody>,
     base_url: web::Data<Url>,
 ) -> Result<HttpResponse, JsonError> {
-    let user_email: String = req_body.user_email.to_owned().to_string();
+    let user_email: String = req_body.user_email.to_owned();
 
     let user_record = User::from_database_by_email(&user_email, &pool).await?;
 
