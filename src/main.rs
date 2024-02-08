@@ -8,11 +8,10 @@ use my_digital_life::{
 use secrecy::Secret;
 use sqlx::postgres::PgPoolOptions;
 
-
 #[actix_web::main]
 async fn main() -> Result<(), std::io::Error> {
     let configuration_settings = get_configuration().expect("Failed to load config settings");
-    
+
     println!("{:#?}", configuration_settings);
     let database_settings = &configuration_settings.database;
     let connection_pool = PgPoolOptions::new().connect_lazy_with(database_settings.with_db());

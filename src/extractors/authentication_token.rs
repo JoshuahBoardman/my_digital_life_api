@@ -21,7 +21,7 @@ impl FromRequest for AuthenticationToken {
     fn from_request(req: &actix_web::HttpRequest, _: &mut actix_web::dev::Payload) -> Self::Future {
         let secret: String = req
             .app_data::<web::Data<Secret<String>>>()
-            .expect("Unable to retrieve the authentication secret")
+            .expect("Error: Unable to retrieve the authentication secret")
             .expose_secret()
             .to_string();
 
@@ -29,7 +29,7 @@ impl FromRequest for AuthenticationToken {
             Some(cookie) => cookie,
             None => {
                 return ready(Err(JsonError {
-                    response_message: "Failed to find authentication cookie".to_string(),
+                    response_message: "Error: Failed to find authentication cookie".to_string(),
                     error_code: StatusCode::UNAUTHORIZED,
                 }));
             }

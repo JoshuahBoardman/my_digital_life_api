@@ -1,9 +1,9 @@
-use actix_web::{HttpResponse, Result as ActixResult};
+use serde::{Deserialize, Serialize};
 
 pub type Url = String;
 
-pub trait CrudOperations {
-    fn get_one(&self) -> ActixResult<HttpResponse>;
-    fn get_all(&self) -> ActixResult<HttpResponse>;
-    fn post_one(&self) -> ActixResult<HttpResponse>;
+#[derive(Serialize, Deserialize, Debug)]
+pub struct RecordPagination {
+    pub limit: Option<i64>,
+    pub offset: Option<i64>,
 }

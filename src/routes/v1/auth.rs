@@ -6,6 +6,7 @@ use crate::{
         common::Url,
         user::User,
     },
+    repository::{user::UserRepository, verification_code::VerificationCodeRepository},
 };
 use actix_web::{
     cookie::{time, Cookie, SameSite},
@@ -14,6 +15,7 @@ use actix_web::{
 use chrono::{prelude::*, Duration};
 use jsonwebtoken::{encode, EncodingKey, Header};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
+use regex::Regex;
 use reqwest::StatusCode;
 use secrecy::{ExposeSecret, Secret};
 use sqlx::PgPool;
@@ -32,10 +34,32 @@ pub async fn verify(
 ) -> Result<HttpResponse, JsonError> {
     let user_verification_code: String = path.into_inner();
 
-    let verification_code = VerificationCode::from_database(&user_verification_code, &pool).await?;
+    let verification_code = match VerificationCodeRepository::new(pool.as_ref())
+        .fetch_verification_code(&user_verification_code)
+        .await
+    {
+        Ok(code) => code as VerificationCode,
+        Err(err) => {
+            return Err(JsonError {
+                response_message: format!("Invaild verification code - {}", err),
+                error_code: StatusCode::INTERNAL_SERVER_ERROR,
+            })
+        }
+    };
     verification_code.verify()?;
 
-    let user_record = User::from_database_by_id(&verification_code.user_id, &pool).await?;
+    let user_record = match UserRepository::new(pool.as_ref())
+        .fetch_user_by_id(&verification_code.user_id)
+        .await
+    {
+        Ok(user) => user,
+        Err(err) => {
+            return Err(JsonError {
+                response_message: format!("User not found - {}", err).to_string(),
+                error_code: StatusCode::INTERNAL_SERVER_ERROR,
+            })
+        }
+    };
 
     let experation_timestamp = (Utc::now() + Duration::hours(1)).naive_utc();
 
@@ -84,7 +108,27 @@ pub async fn login(
 ) -> Result<HttpResponse, JsonError> {
     let user_email: String = req_body.user_email.to_owned();
 
-    let user_record = User::from_database_by_email(&user_email, &pool).await?;
+    // TODO: Move Email validation to user_email type - it can live in the new related funtion
+    let email_regex = Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").unwrap();
+
+    if !(email_regex.is_match(&user_email)) {
+        return Err(JsonError {
+            response_message: "Error: The email provided is invalid".to_string(),
+            error_code: StatusCode::UNPROCESSABLE_ENTITY,
+        });
+    }
+    let user_record = match UserRepository::new(pool.as_ref())
+        .fetch_user_by_email(&user_email)
+        .await
+    {
+        Ok(user) => user,
+        Err(err) => {
+            return Err(JsonError {
+                response_message: format!("User not found - {}", err),
+                error_code: StatusCode::INTERNAL_SERVER_ERROR,
+            })
+        }
+    };
 
     let rand_string: String = thread_rng()
         .sample_iter(&Alphanumeric)
@@ -102,7 +146,16 @@ pub async fn login(
         inserted_at,
     };
 
-    user_verificaton_code.post_in_database(&pool).await?;
+    let _ = match VerificationCodeRepository::new(pool.as_ref())
+        .post_verification_code(&user_verificaton_code)
+        .await
+    {
+        Err(err) => Err(JsonError {
+            response_message: format!("Failed to insert verifcation code - {}", err),
+            error_code: StatusCode::INTERNAL_SERVER_ERROR,
+        }),
+        _ => Ok(()),
+    };
 
     let magic_link = format!("{}/v1/auth/verify/{}", base_url.as_str(), rand_string);
 

@@ -15,25 +15,3 @@ pub struct Book {
     pub finished: bool,
     pub inserted_at: Option<DateTime<Utc>>,
 }
-
-impl Book {
-    pub fn new(
-        name: String,
-        author: String,
-        description: String,
-        rating: BigDecimal,
-        review: String,
-        finished: bool,
-    ) -> Self {
-        Book {
-            id: None,
-            name: name,
-            author: author,
-            description: description,
-            rating: rating,
-            review: Some(review),
-            finished: finished,
-            inserted_at: None,
-        }
-    }
-}

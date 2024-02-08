@@ -1,5 +1,8 @@
 use crate::{
-    errors::JsonError, extractors::authentication_token::AuthenticationToken, model::blog::Blog,
+    errors::JsonError,
+    extractors::authentication_token::AuthenticationToken,
+    model::{blog::Blog, common::RecordPagination},
+    repository::blog::BlogRepository,
 };
 use actix_web::{get, post, web, HttpResponse, Scope};
 use chrono::Utc;
@@ -16,44 +19,43 @@ pub fn blog_scope() -> Scope {
 
 #[get("/{id}")]
 pub async fn get_blog_post(
-    path: web::Path<Uuid>,
+    path: web::Path<String>,
     pool: web::Data<PgPool>,
 ) -> Result<HttpResponse, JsonError> {
-    let post_id: Uuid = path.into_inner();
-
-    match sqlx::query_as!(
-        Blog,
-        r#"
-            SELECT * FROM blog_posts
-            WHERE id = $1 
-            LIMIT 1
-        "#,
-        post_id
-    )
-    .fetch_one(pool.get_ref())
-    .await
-    {
-        Ok(post) => Ok(HttpResponse::Ok().json(post)),
+    match Uuid::parse_str(path.into_inner().as_str()) {
+        Ok(id) => {
+            match BlogRepository::new(pool.as_ref())
+                .fetch_book_by_id(id)
+                .await
+            {
+                Ok(post) => Ok(HttpResponse::Ok().json(post)),
+                Err(err) => Err(JsonError {
+                    response_message: format!(
+                        "Error: Failed to retrieve a record with the provided id - {}",
+                        err
+                    ),
+                    error_code: StatusCode::INTERNAL_SERVER_ERROR,
+                }),
+            }
+        }
         Err(err) => Err(JsonError {
-            response_message: format!(
-                "Error: Failed to retrieve a record with the provided id - {}",
-                err
-            ),
-            error_code: StatusCode::INTERNAL_SERVER_ERROR,
+            response_message: format!("Error: Invalid id - {}", err),
+            error_code: StatusCode::BAD_REQUEST,
         }),
     }
 }
 
 #[get("")]
-pub async fn get_blog_posts(pool: web::Data<PgPool>) -> Result<HttpResponse, JsonError> {
-    match sqlx::query_as!(
-        Blog,
-        r#"
-            SELECT * FROM blog_posts
-        "#,
-    )
-    .fetch_all(pool.get_ref())
-    .await
+pub async fn get_blog_posts(
+    pool: web::Data<PgPool>,
+    record_pagination: web::Query<RecordPagination>,
+) -> Result<HttpResponse, JsonError> {
+    match BlogRepository::new(pool.as_ref())
+        .fetch_blogs(
+            record_pagination.limit.unwrap_or(25),
+            record_pagination.offset.unwrap_or(0),
+        )
+        .await
     {
         Ok(posts) => Ok(HttpResponse::Ok().json(posts)),
         Err(err) => Err(JsonError {
@@ -69,22 +71,7 @@ pub async fn post_blog_post(
     pool: web::Data<PgPool>,
     _: AuthenticationToken,
 ) -> Result<HttpResponse, JsonError> {
-    match sqlx::query_as!(
-        Blog,
-        r#"
-            INSERT INTO blog_posts (id, author_id, title, body, last_updated, inserted_at)
-            VALUES ($1, $2, $3, $4, $5, $6) 
-        "#,
-        Uuid::new_v4(),
-        blog.author_id,
-        blog.title,
-        blog.body,
-        Utc::now(),
-        Utc::now()
-    )
-    .execute(pool.get_ref())
-    .await
-    {
+    match BlogRepository::new(pool.get_ref()).post_blog(&blog).await {
         Ok(_) => Ok(HttpResponse::Ok().json("Success")),
         Err(err) => Err(JsonError {
             response_message: format!("Error: Failed to post the data requested - {}", err),
