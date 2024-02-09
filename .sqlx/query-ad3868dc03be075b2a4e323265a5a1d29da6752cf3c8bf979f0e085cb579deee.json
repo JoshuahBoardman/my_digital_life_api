@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT * FROM blog_posts\n            WHERE id = $1 \n            LIMIT 1\n        ",
+  "query": "\n            SELECT * FROM blog_posts\n            LIMIT $1\n            OFFSET $2\n        ",
   "describe": {
     "columns": [
       {
@@ -36,7 +36,8 @@
     ],
     "parameters": {
       "Left": [
-        "Uuid"
+        "Int8",
+        "Int8"
       ]
     },
     "nullable": [
@@ -48,5 +49,5 @@
       false
     ]
   },
-  "hash": "bb448402c349ce4948624336ed4374e3e3777a35fc8f11466a83b435afefb7f6"
+  "hash": "ad3868dc03be075b2a4e323265a5a1d29da6752cf3c8bf979f0e085cb579deee"
 }

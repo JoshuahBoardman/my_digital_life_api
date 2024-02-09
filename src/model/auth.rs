@@ -1,8 +1,9 @@
-use actix_web::web::Data;
+use chrono:: Duration;
 use chrono::{DateTime, NaiveDateTime, Utc};
+use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, PgPool};
+use sqlx::FromRow;
 use uuid::Uuid;
 
 use crate::errors::JsonError;
@@ -34,6 +35,24 @@ pub struct VerificationCode {
 }
 
 impl VerificationCode {
+    pub fn new(user_id: Uuid) -> Self {
+        let rand_string: String = thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(64)
+            .map(char::from)
+            .collect();
+
+        let inserted_at: DateTime<Utc> = Utc::now();
+
+         VerificationCode {
+            id: Uuid::new_v4(),
+            user_id: user_id,
+            code: rand_string.to_owned(),
+            expires_at: (inserted_at + Duration::hours(1)).naive_utc(),
+            inserted_at,
+        }
+    }
+
     pub fn verify(&self) -> Result<(), JsonError> {
         let naive_current_time = Utc::now().naive_utc();
 

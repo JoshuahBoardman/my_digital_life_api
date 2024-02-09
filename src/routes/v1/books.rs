@@ -2,7 +2,6 @@ use crate::model::{book::Book, common::RecordPagination};
 use crate::repository::book::BookRepository;
 use crate::{errors::JsonError, extractors::authentication_token::AuthenticationToken};
 use actix_web::{get, post, web, web::Json, HttpResponse, Result, Scope};
-use chrono::Utc;
 use reqwest::StatusCode;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -28,7 +27,7 @@ pub async fn get_book_by_id(
                 Ok(book) => Ok(HttpResponse::Ok().json(book)),
                 Err(err) => Err(JsonError {
                     response_message: format!("Error: Failed to fetch requested record - {}", err),
-                    error_code: StatusCode::INTERNAL_SERVER_ERROR, //TODO: change error code set
+                    error_code: StatusCode::INTERNAL_SERVER_ERROR,
                 }),
             }
         }

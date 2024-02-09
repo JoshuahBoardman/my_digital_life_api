@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT * FROM blog_posts\n        ",
+  "query": "\n                SELECT * FROM blog_posts\n                WHERE id = $1 \n                LIMIT 1\n            ",
   "describe": {
     "columns": [
       {
@@ -35,7 +35,9 @@
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": [
+        "Uuid"
+      ]
     },
     "nullable": [
       false,
@@ -46,5 +48,5 @@
       false
     ]
   },
-  "hash": "eee4e53b36e0ccc4966538c7cb57da62edb337f80ddcfb1eca6bbabb120a8dc9"
+  "hash": "e573d9be11e8a488ec3a46b86d101d6739ad7323030ac5df1e433f8a30175464"
 }

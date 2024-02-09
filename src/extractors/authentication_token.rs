@@ -52,8 +52,6 @@ fn validate_jwt(jwt: &str, secret: &str) -> Result<Claims, JWTError> {
         &DecodingKey::from_secret(secret.as_ref()),
         &Validation::new(Algorithm::HS256),
     );
-    //TODO: find out what the below comment was for... FeelsBadMan q_q
-    //if decode.
 
     match decode {
         Ok(token) => Ok(token.claims),

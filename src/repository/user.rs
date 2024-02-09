@@ -1,11 +1,7 @@
-use std::i64;
-
-use chrono::Utc;
 use sqlx::{Error as SqlxError, PgPool};
 use uuid::Uuid;
 
 use crate::model::user::User;
-
 pub struct UserRepository<'a> {
     connection_pool: &'a PgPool,
 }

@@ -14,4 +14,5 @@ pub struct Book {
     pub review: Option<String>,
     pub finished: bool,
     pub inserted_at: Option<DateTime<Utc>>,
+    pub last_updated: Option<DateTime<Utc>>,
 }

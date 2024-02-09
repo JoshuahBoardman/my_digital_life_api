@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                SELECT * FROM \n                users WHERE email = $1\n            ",
+  "query": "\n                SELECT * FROM users\n                WHERE email = $1\n                LIMIT 1\n            ",
   "describe": {
     "columns": [
       {
@@ -46,5 +46,5 @@
       false
     ]
   },
-  "hash": "e14738be4a3c91ef540facd9faac7f2269a16503c8d2acebd5b306441fc6ee4c"
+  "hash": "4c4118d28525044990cec734b1e10f7bfb8a2d0c3e13206a44b1b59584987a75"
 }

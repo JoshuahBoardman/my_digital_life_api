@@ -48,8 +48,8 @@ impl BookRepository<'_> {
     pub async fn post_book<'a>(&self, book: &'a Book) -> Result<String, SqlxError> {
         match sqlx::query!(
             r#"
-                INSERT INTO books (id, name, author, description, rating, review, finished, inserted_at)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                INSERT INTO books (id, name, author, description, rating, review, finished, inserted_at, last_updated)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             "#,
             Uuid::new_v4(),
             book.name,
@@ -59,6 +59,7 @@ impl BookRepository<'_> {
             book.review,
             book.finished,
             Utc::now(),
+            Utc::now()
         )
         .execute(self.connection_pool)
         .await

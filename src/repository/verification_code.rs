@@ -1,8 +1,6 @@
-use std::i64;
-
-use sqlx::{Error as SqlxError, PgPool};
-
 use crate::model::auth::VerificationCode;
+use sqlx::{Error as SqlxError, PgPool};
+use uuid::Uuid;
 
 pub struct VerificationCodeRepository<'a> {
     connection_pool: &'a PgPool,
@@ -34,7 +32,9 @@ impl VerificationCodeRepository<'_> {
         &self,
         verification_code: &'a VerificationCode,
     ) -> Result<&str, SqlxError> {
-        //TODO: check if there is already a code and delete the previous one if there is
+        let _ = self
+            .delete_verification_code_by_user(&verification_code.user_id)
+            .await?;
 
         match sqlx::query!(
             r#"
@@ -46,6 +46,25 @@ impl VerificationCodeRepository<'_> {
             verification_code.expires_at,
             verification_code.user_id,
             verification_code.inserted_at,
+        )
+        .execute(self.connection_pool)
+        .await
+        {
+            Ok(_) => Ok("Success"),
+            Err(err) => Err(err),
+        }
+    }
+
+    pub async fn delete_verification_code_by_user<'a>(
+        &self,
+        user_id: &'a Uuid,
+    ) -> Result<&str, SqlxError> {
+        match sqlx::query!(
+            "
+                DELETE FROM verification_codes
+                WHERE user_id = $1
+            ",
+            user_id
         )
         .execute(self.connection_pool)
         .await

@@ -7,5 +7,6 @@ CREATE TABLE users(
     PRIMARY KEY (id),
     user_name TEXT NOT NULL, 
     email EMAIL NOT NULL,
-    inserted_at TIMESTAMPTZ NOT NULL
+    inserted_at TIMESTAMPTZ NOT NULL,
+    last_updated TIMESTAMPTZ NOT NULL
 );

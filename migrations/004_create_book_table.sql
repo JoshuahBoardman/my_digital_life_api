@@ -7,5 +7,6 @@ CREATE TABLE books(
     rating DECIMAL(3, 2) NOT NULL CHECK (rating >= 0 AND rating <= 5),
     review TEXT, 
     finished BOOLEAN NOT NULL,
-    inserted_at TIMESTAMPTZ NOT NULL
+    inserted_at TIMESTAMPTZ NOT NULL,
+    last_updated TIMESTAMPTZ NOT NULL
 );

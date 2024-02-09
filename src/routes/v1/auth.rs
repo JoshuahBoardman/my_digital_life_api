@@ -4,7 +4,6 @@ use crate::{
     model::{
         auth::{Claims, LoginRequestBody, /*Secret,*/ VerificationCode},
         common::Url,
-        user::User,
     },
     repository::{user::UserRepository, verification_code::VerificationCodeRepository},
 };
@@ -14,12 +13,10 @@ use actix_web::{
 };
 use chrono::{prelude::*, Duration};
 use jsonwebtoken::{encode, EncodingKey, Header};
-use rand::{distributions::Alphanumeric, thread_rng, Rng};
-use regex::Regex;
 use reqwest::StatusCode;
 use secrecy::{ExposeSecret, Secret};
 use sqlx::PgPool;
-use uuid::Uuid;
+use validator::validate_email;
 
 pub fn auth_scope() -> Scope {
     web::scope("/auth").service(login).service(verify)
@@ -41,11 +38,15 @@ pub async fn verify(
         Ok(code) => code as VerificationCode,
         Err(err) => {
             return Err(JsonError {
-                response_message: format!("Invaild verification code - {}", err),
+                response_message: format!(
+                    "Error: Issue proccessing the verification code - {}",
+                    err
+                ),
                 error_code: StatusCode::INTERNAL_SERVER_ERROR,
             })
         }
     };
+
     verification_code.verify()?;
 
     let user_record = match UserRepository::new(pool.as_ref())
@@ -55,7 +56,7 @@ pub async fn verify(
         Ok(user) => user,
         Err(err) => {
             return Err(JsonError {
-                response_message: format!("User not found - {}", err).to_string(),
+                response_message: format!("Error: User not found - {}", err).to_string(),
                 error_code: StatusCode::INTERNAL_SERVER_ERROR,
             })
         }
@@ -108,15 +109,15 @@ pub async fn login(
 ) -> Result<HttpResponse, JsonError> {
     let user_email: String = req_body.user_email.to_owned();
 
-    // TODO: Move Email validation to user_email type - it can live in the new related funtion
-    let email_regex = Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").unwrap();
+    let is_valid_email = validate_email(user_email.to_owned());
 
-    if !(email_regex.is_match(&user_email)) {
+    if let false = is_valid_email {
         return Err(JsonError {
             response_message: "Error: The email provided is invalid".to_string(),
             error_code: StatusCode::UNPROCESSABLE_ENTITY,
         });
     }
+
     let user_record = match UserRepository::new(pool.as_ref())
         .fetch_user_by_email(&user_email)
         .await
@@ -124,40 +125,26 @@ pub async fn login(
         Ok(user) => user,
         Err(err) => {
             return Err(JsonError {
-                response_message: format!("User not found - {}", err),
+                response_message: format!("Error: User not found - {}", err),
                 error_code: StatusCode::INTERNAL_SERVER_ERROR,
             })
         }
     };
 
-    let rand_string: String = thread_rng()
-        .sample_iter(&Alphanumeric)
-        .take(64)
-        .map(char::from)
-        .collect();
-
-    let inserted_at: DateTime<Utc> = Utc::now();
-
-    let user_verificaton_code = VerificationCode {
-        id: Uuid::new_v4(),
-        user_id: user_record.id.to_owned(),
-        code: rand_string.to_owned(),
-        expires_at: (inserted_at + Duration::hours(1)).naive_utc(),
-        inserted_at,
-    };
+    let user_verificaton_code = VerificationCode::new(user_record.id.to_owned());
 
     let _ = match VerificationCodeRepository::new(pool.as_ref())
         .post_verification_code(&user_verificaton_code)
         .await
     {
         Err(err) => Err(JsonError {
-            response_message: format!("Failed to insert verifcation code - {}", err),
+            response_message: format!("Error: Failed to insert verifcation code - {}", err),
             error_code: StatusCode::INTERNAL_SERVER_ERROR,
         }),
         _ => Ok(()),
     };
 
-    let magic_link = format!("{}/v1/auth/verify/{}", base_url.as_str(), rand_string);
+    let magic_link = format!("{}/v1/auth/verify/{}", base_url.as_str(), user_verificaton_code.code);
 
     let template_model = TemplateModel {
         magic_link: magic_link.as_ref(),
